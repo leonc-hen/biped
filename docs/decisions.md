@@ -51,6 +51,13 @@ Decision: the observation vector and action vector are defined once, in docs/int
 Reasons: mismatched ordering and scaling between sim and firmware is a common source of sim to real failures.
 Revisit trigger: any change needs a version bump and a log entry.
 
+### D07 Simulation effects are written once
+Status: Provisional, confirm in Phase 2
+Decision: motor model, sensor noise, delay, battery and randomization are pure functions (arrays in, arrays out, state passed explicitly), written with jax.numpy so the same code runs in plain MuJoCo debugging and in the GPU training environment.
+Reasons: one implementation means no drift between debugging and training; pure functions are easy to test.
+Rejected: separate numpy and JAX versions (they drift apart).
+Revisit trigger: if the Playground environment structure makes this awkward when you read it in Phase 2.
+
 ## Deferred to Phase 2 data (decide at Gate A)
 
 Leg topology (knee motor at the knee, or both motors at the hip with a linkage to keep the leg light); exact actuator models and gear ratios; leg lengths; wheel size; battery capacity.

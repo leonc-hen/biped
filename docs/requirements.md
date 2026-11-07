@@ -62,3 +62,26 @@ and anything that needs a requirement not listed above.
 
 A requirement can change only at a gate (A, B or C). Record the date, the old value, the new value,
 and the reason in decisions.md. Do not change a requirement because a test is failing.
+
+## 5. Model fidelity checklist
+
+The simulation is built in four layers. Each level adds to the one below it. A later phase may
+move up a level but never rewrites a lower one. The environment takes a fidelity_level argument
+(0 to 3), and every level has a test that shows its effect is switched on.
+
+Level 0: ideal model. The model generated from params.yaml (Step 7): rigid bodies, joint limits,
+joint friction and damping, reflected rotor inertia, wheel friction, ideal actuators, no noise, no delay.
+Used for the LQR derivation and first checks.
+Level 1: adds the real motor model and wheel contact compliance.
+Level 2: adds noise, quantization, control delay and battery sag.
+Level 3: adds full randomization. Gate A must be passed at this level.
+
+| Item | What it models | Level | Planned file and function | New params (params.yaml) | Test |
+|---|---|---|---|---|---|
+| Rigid body model | Masses, inertias, geometry | 0 | model/build_mjcf.py, build_xml | existing | test_model.py |
+| Joint limits | Hip and knee range stops | 0 | model/build_mjcf.py | existing | limit test |
+| Gearbox inertia and friction | Reflected rotor inertia, Coulomb and viscous friction | 0 | model/build_mjcf.py (armature, frictionloss, damping) | existing | friction decay test |
+| Wheel contact, friction | Tire friction coefficients | 0 | model/build_mjcf.py | existing | no slip drive test |
+| DC motor model | Torque speed curve and current limit, back EMF, replaces ideal torque | 1 | sim/motor_model.py, motor_torque | back_emf_constant, current_limit_A | torque falls with speed |
+| Wheel contact, compliance | Small tire compliance | 1 | model/build_mjcf.py (solref, solimp) | tire_solref, tire_solimp | bounce test |
+| IMU noise | Gyro and
