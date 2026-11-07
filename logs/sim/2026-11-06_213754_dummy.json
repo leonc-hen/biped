@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-06T21:37:54",
+  "seed": 0,
+  "git_commit": "unknown",
+  "config": {
+    "note": "dummy run",
+    "policy_rate_hz": 100
+  }
+}

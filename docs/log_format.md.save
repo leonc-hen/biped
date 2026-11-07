@@ -1,0 +1,12 @@
+One CSV file per run, named YYYY-MM-DD_HHMMSS_<name>.csv.
+Simulation logs go in logs/sim/ and hardware logs in logs/real/. Both use the exact same columns.
+Column names end in their unit (_rad, _rad_s, _Nm, _V). The time column is t_s.
+Each CSV has a matching .json file with the seed, config, date, and git commit.
+You may add columns later, but never rename or delete one.
+
+t_s, pitch_rad, pitch_rate_rad_s, yaw_rad, yaw_rate_rad_s,
+wheel_pos_l_rad, wheel_pos_r_rad, wheel_vel_l_rad_s, wheel_vel_r_rad_s,
+hip_pos_l_rad, hip_pos_r_rad, knee_pos_l_rad, knee_pos_r_rad,
+wheel_torque_l_Nm, wheel_torque_r_Nm, hip_torque_l_Nm, hip_torque_r_Nm,
+knee_torque_l_Nm, knee_torque_r_Nm, battery_V
+
