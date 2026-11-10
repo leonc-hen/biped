@@ -1,0 +1,26 @@
+# params.yaml  (ALL PLACEHOLDERS, 1.5 kg class robot)
+# Replace after Phase 2 and again after weighing real parts.
+
+# Conventions (from Phase 0): x forward, tilt positive leaning forward,
+# wheel rotation positive when rolling forward.
+
+# --- From the Phase 1 table ---
+wheel_mass_total_kg: 0.20
+wheel_radius_m: 0.03
+body_mass_kg: 1.20
+axle_to_com_m: 0.12
+body_pitch_inertia_kgm2: 0.0025
+motor_kt_nm_per_a: 0.10
+winding_resistance_ohm: 2.0
+battery_voltage_v: 24.0
+current_limit_a: 5.0
+track_width_m: 0.14
+
+# --- Added, needed by the model ---
+gravity_ms2: 9.81
+wheel_inertia_total_kgm2: 9.0e-5
+motor_ke_vs_per_rad: 0.10
+viscous_friction_nm_s_per_rad: 0.0
+yaw_body_inertia_kgm2: 0.003
+viscous_friction_nm_s_per_rad: 0.001   # per motor, my placeholder guess
+motor_count: 2

@@ -67,3 +67,16 @@ Deadline: Gate A.
 
 Frame materials; connectors; wiring layout; exact wheel motor and driver (must support current control, see D04); gripper design.
 Deadline: Gate B.
+
+
+“Model: torque input with body reaction (τ/r on x, −τ on θ). Verified by sympy, energy conservation, and linear vs nonlinear comparison.” 
+Yaw angle ψ is positive counterclockwise seen from above, which is a left turn. The right wheel driving faster than the left produces a positive yaw rate.
+   Yaw: psi positive counterclockwise (left turn). I_psi = I_z + M_eff*d^2/4
+   (corrected from d^2/2). Yaw loop: PI on rate (wn 15, zeta 1) with P on
+   heading (Kh 4). Balance torque has priority over differential torque.
+
+   Controller: LQR on [z, v, theta, thetadot], Q = diag(5,1,50,1), R = 100.
+   Large R chosen for delay tolerance (R <= 10 fails near 8 ms). R = 1000 too weak
+   to recover 0.2 rad. Designed on the frictionless model, tested with friction.
+   Position hold uses the same matrices with z = x. Clamp the integral in velocity mode.
+   Velocity tracking is slow (about 4 s). Tune Q later.
