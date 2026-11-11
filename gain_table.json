@@ -1,0 +1,47 @@
+{
+  "entries": [
+    {
+      "name": "lqr_baseline_R100",
+      "git_commit": "993ad15",
+      "state_order": [
+        "z",
+        "v",
+        "theta",
+        "thetadot"
+      ],
+      "control_law": "u = -K @ state, u is total wheel torque in N m",
+      "Q_diag": [
+        5,
+        1,
+        50,
+        1
+      ],
+      "R": 100,
+      "K": [
+        -0.223607,
+        -0.273607,
+        -1.420365,
+        -0.153675
+      ],
+      "fastest_closed_loop_pole_rad_s": 73.96,
+      "params": {
+        "wheel_mass_total_kg": 0.2,
+        "wheel_radius_m": 0.03,
+        "body_mass_kg": 1.2,
+        "axle_to_com_m": 0.12,
+        "body_pitch_inertia_kgm2": 0.0025,
+        "motor_kt_nm_per_a": 0.1,
+        "winding_resistance_ohm": 2.0,
+        "battery_voltage_v": 24.0,
+        "current_limit_a": 5.0,
+        "track_width_m": 0.14,
+        "gravity_ms2": 9.81,
+        "wheel_inertia_total_kgm2": 9e-05,
+        "motor_ke_vs_per_rad": 0.1,
+        "viscous_friction_nm_s_per_rad": 0.001,
+        "yaw_body_inertia_kgm2": 0.003,
+        "motor_count": 2
+      }
+    }
+  ]
+}
