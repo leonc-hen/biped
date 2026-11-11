@@ -98,3 +98,10 @@ Total                                 ___ ms
    Fall threshold of 1.3 rad is a placeholder, set it from the CAD geometry.
    My loop rate numbers differ from the original Phase 1 notes (those had 0.6 rad at 50 Hz);
    likely they included noise or an estimator.
+
+   Estimator: complementary filter, tau 0.5 s, encoder acceleration compensation
+   (20 Hz low pass), gyro bias calibrated at startup. Plain 0.5 s filter rejected:
+   acceleration contamination ruins velocity tracking. 2 s filter rejected: bias error
+   grows as bias * tau. Kalman filter planned as an upgrade.
+   Sensor noise values are placeholders. Randomize IMU position in Phase 2.
+   My numbers are smaller than the original notes (those had 7.6 deg for the plain filter).

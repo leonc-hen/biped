@@ -20,6 +20,11 @@ class Params:
     viscous_friction_nm_s_per_rad: float
     yaw_body_inertia_kgm2: float
     motor_count: int
+    imu_height_m: float
+    gyro_noise_rad_s: float
+    gyro_bias_rad_s: float
+    accel_noise_ms2: float
+    encoder_noise_rad_s: float
 
     # Derived quantities, used by the model in step 2
     @property

@@ -24,3 +24,9 @@ viscous_friction_nm_s_per_rad: 0.0
 yaw_body_inertia_kgm2: 0.003
 viscous_friction_nm_s_per_rad: 0.001   # per motor, my placeholder guess
 motor_count: 2
+# --- Sensors (Step 7, all placeholders) ---
+imu_height_m: 0.10              # IMU position above the axle, along the body axis
+gyro_noise_rad_s: 0.005         # white noise per sample, rms
+gyro_bias_rad_s: 0.02           # constant bias, about 1.1 deg/s
+accel_noise_ms2: 0.05           # white noise per sample, rms
+encoder_noise_rad_s: 0.05       # wheel speed noise per sample, rms
