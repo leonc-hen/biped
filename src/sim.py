@@ -3,17 +3,17 @@ from model import deriv, rk4
 from actuator import torque_mode
 
 def simulate(p, K, theta0=0.2, v_ref=0.0, rate_hz=500.0, delay_s=0.0,
-             t_end=2.0, dt=1e-4, fall_rad=1.3, limits=True, latency_samples=0):
+             t_end=2.0, dt=1e-4, fall_rad=1.3, limits=True, latency_samples=0, v0=0.0):
     """Closed loop nonlinear simulation with a discrete controller, a pure delay,
     and the torque mode actuator (current and voltage limits, friction).
     Returns a dict of results."""
     Ts = 1.0 / rate_hz
     steps_per_ctrl = int(round(Ts / dt))
-    s = np.array([0.0, 0.0, theta0, 0.0])
+    s = np.array([0.0, v0, theta0, 0.0])
     z, u_cmd = 0.0, 0.0
     pending = []                      # (apply_time, command)
     applied = 0.0
-    th_hist, v_hist, u_hist = [], [], []
+    th_hist, v_hist, u_hist, w_hist = [], [], [], []
     n = int(t_end / dt)
     fell = False
     for k in range(n):
@@ -30,9 +30,10 @@ def simulate(p, K, theta0=0.2, v_ref=0.0, rate_hz=500.0, delay_s=0.0,
             tau = applied                 # ideal actuator, no limits, no friction
         s = rk4(lambda q: deriv(p, q, tau), s, dt)
         th_hist.append(s[2]); v_hist.append(s[1]); u_hist.append(tau)
+        w_hist.append(s[1] / p.wheel_radius_m - s[3])
         if abs(s[2]) > fall_rad:
             fell = True
             break
     th = np.array(th_hist)
-    return {"fell": fell, "theta": th, "v": np.array(v_hist), "tau": np.array(u_hist),
+    return {"fell": fell, "theta": th, "v": np.array(v_hist), "tau": np.array(u_hist), "w_rel": np.array(w_hist),
             "final_theta": th[-1], "final_v": v_hist[-1], "peak_tau": float(np.max(np.abs(u_hist)))}

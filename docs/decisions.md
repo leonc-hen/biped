@@ -105,3 +105,9 @@ Total                                 ___ ms
    grows as bias * tau. Kalman filter planned as an upgrade.
    Sensor noise values are placeholders. Randomize IMU position in Phase 2.
    My numbers are smaller than the original notes (those had 7.6 deg for the plain filter).
+
+   Actuator demands (balance alone, R = 100, placeholder params):
+   0.3 rad recovery: 0.43 N m total, 2.1 A per motor, 2.4 W, 16 rad/s relative wheel speed.
+   Driving 1 m/s needs 33 rad/s at the wheel (318 rpm). Standing still: negligible torque.
+   Preliminary motor target with 2 to 3x margin: 0.4 to 0.6 N m per motor, 100 to 150 rad/s.
+   NOT final. Jumping and landing in Phase 2 set the real requirement.
