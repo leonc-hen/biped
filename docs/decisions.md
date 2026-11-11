@@ -80,3 +80,21 @@ Yaw angle ψ is positive counterclockwise seen from above, which is a left turn.
    to recover 0.2 rad. Designed on the frictionless model, tested with friction.
    Position hold uses the same matrices with z = x. Clamp the integral in velocity mode.
    Velocity tracking is slow (about 4 s). Tune Q later.
+
+Latency budget (target: 5 ms total, measured margin about 14 ms)
+
+IMU sample and read time              ___ ms
+Estimator and filter compute          ___ ms
+Controller compute                    ___ ms
+CAN message to the motor driver       ___ ms
+Driver current loop response          ___ ms
+Average sample hold (half the period) ___ ms
+----------------------------------------------
+Total                                 ___ ms
+
+   Loop rate: inner balance loop at 200 Hz minimum, 500 Hz target. 50 Hz rejected.
+   Delay: measured margin about 12 to 20 ms (idealized, no noise or estimator).
+   Latency target: 5 ms total or less. Budget table to be filled when hardware is chosen.
+   Fall threshold of 1.3 rad is a placeholder, set it from the CAD geometry.
+   My loop rate numbers differ from the original Phase 1 notes (those had 0.6 rad at 50 Hz);
+   likely they included noise or an estimator.

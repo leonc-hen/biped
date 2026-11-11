@@ -3,7 +3,7 @@ from model import deriv, rk4
 from actuator import torque_mode
 
 def simulate(p, K, theta0=0.2, v_ref=0.0, rate_hz=500.0, delay_s=0.0,
-             t_end=2.0, dt=1e-4, fall_rad=1.3):
+             t_end=2.0, dt=1e-4, fall_rad=1.3, limits=True, latency_samples=0):
     """Closed loop nonlinear simulation with a discrete controller, a pure delay,
     and the torque mode actuator (current and voltage limits, friction).
     Returns a dict of results."""
@@ -21,10 +21,13 @@ def simulate(p, K, theta0=0.2, v_ref=0.0, rate_hz=500.0, delay_s=0.0,
         if k % steps_per_ctrl == 0:
             z += (s[1] - v_ref) * Ts
             u_cmd = float((-K @ np.array([z, s[1], s[2], s[3]])).item())
-            pending.append((t + delay_s, u_cmd))
+            pending.append((t + delay_s + latency_samples * Ts, u_cmd))
         while pending and pending[0][0] <= t + 1e-12:
             applied = pending.pop(0)[1]
-        tau, cur = torque_mode(p, s, applied)
+        if limits:
+            tau, cur = torque_mode(p, s, applied)
+        else:
+            tau = applied                 # ideal actuator, no limits, no friction
         s = rk4(lambda q: deriv(p, q, tau), s, dt)
         th_hist.append(s[2]); v_hist.append(s[1]); u_hist.append(tau)
         if abs(s[2]) > fall_rad:
