@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "created_utc": "2026-11-11T03:25:21+00:00",
+    "git_commit": "48e9aff",
+    "git_uncommitted_changes": true,
+    "note": "All values use PLACEHOLDER parameters. Regenerate after every params.yaml change."
+  },
+  "conditions": {
+    "loop_rate_hz": 500.0,
+    "sim_step_s": 0.0002,
+    "estimator": {
+      "estimator": "complementary",
+      "tau_c": 0.5,
+      "compensate": true
+    },
+    "actuator": "torque mode with limits and friction",
+    "fall_threshold_rad": 1.3,
+    "noise_seed_list": [
+      1,
+      2,
+      3
+    ],
+    "recovery_criterion": "no fall and final tilt under 3 deg, final speed under 0.1 m/s for pushes"
+  },
+  "controller": {
+    "type": "LQR, state [z, v, theta, thetadot]",
+    "Q_diag": [
+      5,
+      1,
+      50,
+      1
+    ],
+    "R": 100,
+    "K": [
+      -0.223607,
+      -0.273607,
+      -1.420365,
+      -0.153675
+    ]
+  },
+  "params": {
+    "wheel_mass_total_kg": 0.2,
+    "wheel_radius_m": 0.03,
+    "body_mass_kg": 1.2,
+    "axle_to_com_m": 0.12,
+    "body_pitch_inertia_kgm2": 0.0025,
+    "motor_kt_nm_per_a": 0.1,
+    "winding_resistance_ohm": 2.0,
+    "battery_voltage_v": 24.0,
+    "current_limit_a": 5.0,
+    "track_width_m": 0.14,
+    "gravity_ms2": 9.81,
+    "wheel_inertia_total_kgm2": 9e-05,
+    "motor_ke_vs_per_rad": 0.1,
+    "viscous_friction_nm_s_per_rad": 0.001,
+    "yaw_body_inertia_kgm2": 0.003,
+    "motor_count": 2,
+    "imu_height_m": 0.1,
+    "gyro_noise_rad_s": 0.005,
+    "gyro_bias_rad_s": 0.02,
+    "accel_noise_ms2": 0.05,
+    "encoder_noise_rad_s": 0.05
+  },
+  "results": {
+    "1_max_recovered_tilt_rad": 1.2,
+    "1b_recovery_time_s": {
+      "0.3_rad": 0.14020000000000002,
+      "0.9_rad": 1.514
+    },
+    "2_max_push_m_s": 5.5,
+    "3_velocity_tracking": {
+      "0.3_m_s": {
+        "settling_time_5pct_s": 4.05,
+        "overshoot_pct": 12.3,
+        "final_error_m_s": -0.0003,
+        "fell": false
+      },
+      "1.0_m_s": {
+        "settling_time_5pct_s": 4.0,
+        "overshoot_pct": 12.9,
+        "final_error_m_s": -0.0004,
+        "fell": false
+      }
+    },
+    "4_demands": {
+      "recover_0.3_rad": {
+        "peak_torque_per_motor_nm": 0.212,
+        "rms_torque_per_motor_nm": 0.013,
+        "peak_current_per_motor_a": 2.12,
+        "rms_current_per_motor_a": 0.13,
+        "fell": false
+      },
+      "push_0.6_m_s": {
+        "peak_torque_per_motor_nm": 0.082,
+        "rms_torque_per_motor_nm": 0.0079,
+        "peak_current_per_motor_a": 0.82,
+        "rms_current_per_motor_a": 0.079,
+        "fell": false
+      },
+      "drive_1.0_m_s": {
+        "peak_torque_per_motor_nm": 0.043,
+        "rms_torque_per_motor_nm": 0.0333,
+        "peak_current_per_motor_a": 0.43,
+        "rms_current_per_motor_a": 0.333,
+        "fell": false
+      }
+    },
+    "5_delay_margin_ms": 22,
+    "6_rms_tilt_deg_standing": {
+      "noise_x1": 0.0184,
+      "noise_x3": 0.0553
+    },
+    "7_energy": {
+      "joules_per_meter": 2.668,
+      "mean_power_w": 2.669,
+      "copper_w": 0.445,
+      "mechanical_w": 2.224
+    }
+  }
+}
