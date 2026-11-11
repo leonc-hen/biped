@@ -111,3 +111,11 @@ Total                                 ___ ms
    Driving 1 m/s needs 33 rad/s at the wheel (318 rpm). Standing still: negligible torque.
    Preliminary motor target with 2 to 3x margin: 0.4 to 0.6 N m per motor, 100 to 150 rad/s.
    NOT final. Jumping and landing in Phase 2 set the real requirement.
+
+      Sweeps (nominal gains, R = 100): stable and full recovery for mass +/-20%, CoM height
+   0.08 to 0.20 m, inertia x0.5 to x2, wheel radius +/-20%, torque gain x0.5 to x2.
+   Redesigned tilt gain varies only -1.34 to -1.61, so no gain scheduling.
+   Risks, in order: viscous friction (3x placeholder cuts recovery to 0.3 rad), forward
+   payload offset (robot leans back and creeps about 0.7 m; compensate arm CoM), then Kt.
+   Delay margin with estimator about 22 ms. Keep the 5 ms latency target.
+   Not yet run: Coulomb friction, backlash, slope, combined sweeps.

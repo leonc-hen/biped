@@ -1,0 +1,53 @@
+Nominal tilt gain for reference: -1.42
+Check 1: body mass
+  mass x0.8                          open loop pole  14.0   closed loop stable   ( -1.03)   recovers 1.2 rad   redesigned tilt gain  -1.34
+  mass x1.0                          open loop pole  15.4   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  mass x1.2                          open loop pole  16.7   closed loop stable   ( -1.27)   recovers 1.2 rad   redesigned tilt gain  -1.50
+Check 2: axle to center of mass distance (inertia held fixed)
+  l = 0.08 m                         open loop pole  15.3   closed loop stable   ( -0.93)   recovers 1.2 rad   redesigned tilt gain  -1.34
+  l = 0.1 m                          open loop pole  15.5   closed loop stable   ( -1.05)   recovers 1.2 rad   redesigned tilt gain  -1.38
+  l = 0.12 m                         open loop pole  15.4   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  l = 0.16 m                         open loop pole  14.8   closed loop stable   ( -1.28)   recovers 1.2 rad   redesigned tilt gain  -1.48
+  l = 0.2 m                          open loop pole  13.9   closed loop stable   ( -1.36)   recovers 1.2 rad   redesigned tilt gain  -1.53
+Check 3: body pitch inertia
+  inertia x0.5                       open loop pole  17.3   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.41
+  inertia x0.8                       open loop pole  16.1   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  inertia x1.2                       open loop pole  14.8   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  inertia x2.0                       open loop pole  12.9   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.44
+Check 4: wheel radius
+  radius x0.8                        open loop pole  15.4   closed loop stable   ( -1.13)   recovers 1.2 rad   redesigned tilt gain  -1.35
+  radius x1.2                        open loop pole  15.4   closed loop stable   ( -1.16)   recovers 1.2 rad   redesigned tilt gain  -1.49
+Check 5: motor torque constant error (delivered torque scales the gains)
+  Kt error, torque x0.5              open loop pole  15.4   closed loop stable   ( -1.27)   recovers 0.9 rad   redesigned tilt gain  -1.42
+  Kt error, torque x0.8              open loop pole  15.4   closed loop stable   ( -1.32)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  Kt error, torque x1.2              open loop pole  15.4   closed loop stable   ( -1.05)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  Kt error, torque x1.5              open loop pole  15.4   closed loop stable   ( -0.98)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  Kt error, torque x2.0              open loop pole  15.4   closed loop stable   ( -0.92)   recovers 1.2 rad   redesigned tilt gain  -1.42
+Check 6: viscous friction (placeholder is 0.001)
+  friction 0.0                       open loop pole  15.4   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  friction 0.001                     open loop pole  15.4   closed loop stable   ( -1.14)   recovers 1.2 rad   redesigned tilt gain  -1.42
+  friction 0.002                     open loop pole  15.4   closed loop stable   ( -1.14)   recovers 0.9 rad   redesigned tilt gain  -1.42
+  friction 0.003                     open loop pole  15.4   closed loop stable   ( -1.14)   recovers 0.3 rad   redesigned tilt gain  -1.42
+Check 7: 0.2 kg payload on the arm (height above axle, forward offset)
+  payload h=0.1 fwd=0.0              open loop pole  16.4   closed loop stable   ( -1.23)   recovers 1.2 rad   redesigned tilt gain  -1.48
+                                     CoM line leans  0.0 deg from the body axis
+  payload h=0.2 fwd=0.0              open loop pole  15.1   closed loop stable   ( -1.30)   recovers 1.2 rad   redesigned tilt gain  -1.51
+                                     CoM line leans  0.0 deg from the body axis
+  payload h=0.3 fwd=0.0              open loop pole  12.3   closed loop stable   ( -1.34)   recovers 1.2 rad   redesigned tilt gain  -1.56
+                                     CoM line leans  0.0 deg from the body axis
+  payload h=0.2 fwd=0.1              open loop pole  13.7   closed loop stable   ( -1.30)   recovers 0.9 rad   redesigned tilt gain  -1.53
+                                     CoM line leans  6.2 deg from the body axis
+  payload h=0.3 fwd=0.1              open loop pole  11.6   closed loop stable   ( -1.34)   recovers 0.9 rad   redesigned tilt gain  -1.58
+                                     CoM line leans  5.6 deg from the body axis
+  payload h=0.3 fwd=0.2              open loop pole  10.0   closed loop stable   ( -1.33)   recovers 0.9 rad   redesigned tilt gain  -1.61
+                                     CoM line leans 11.1 deg from the body axis
+Check 8: sensor noise, estimator in the loop (command 0.3 m/s, 8 s)
+  noise x 1   fell=False tilt err rms 0.03 deg   torque rms 0.0210 N m   final v 0.298
+  noise x 3   fell=False tilt err rms 0.07 deg   torque rms 0.0212 N m   final v 0.293
+  noise x10   fell=False tilt err rms 0.22 deg   torque rms 0.0232 N m   final v 0.274
+Check 9: gyro bias, not calibrated
+  bias 0.02 rad/s   fell=False tilt err rms 0.58 deg   final v 0.299
+  bias 0.05 rad/s   fell=False tilt err rms 1.43 deg   final v 0.297
+  bias 0.1 rad/s   fell=False tilt err rms 2.85 deg   final v 0.295
+Check 10: delay margin WITH the estimator and noise in the loop (start tilt 0.3 rad)
+  largest passing extra delay: 22 ms
