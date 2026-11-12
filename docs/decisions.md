@@ -123,3 +123,10 @@ Total                                 ___ ms
    limits, 500 Hz. RL must be scored under identical conditions. Metrics 1 and 2 are
    limited by the placeholder 1.3 rad fall threshold. Set it from CAD and regenerate.
    Metric 7 is dominated by placeholder friction. Regenerate after any params change.
+
+      MuJoCo cross check passed (MuJoCo 4.0.1, implicitfast, 0.5 ms, solref 0.001 1,
+   solimp 0.99 0.999 0.0001, friction 1.5). Open loop tilt error 0.3 to 0.9 percent over 0.5 s,
+   torque step 0.4 percent, closed loop LQR tilt error 0.17 percent (contact model).
+   Removing the reaction torque gives 26 percent error, so the check is sensitive to it.
+   Use the contact model as the closed loop reference. The constraint model's velocity
+   error (7 percent) is constraint softness and shrinks with timestep.

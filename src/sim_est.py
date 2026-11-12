@@ -13,11 +13,13 @@ def _skip(values, n):
 
 
 def simulate_est(p, K, estimator=None, tau_c=0.5, compensate=False, v_ref=0.3,
-                 rate_hz=500.0, t_end=8.0, dt=2e-4, fall_rad=1.3, seed=1, theta0=0.0,
+                 rate_hz=500.0, t_end=8.0, dt=2e-4, fall_rad=None, seed=1, theta0=0.0,
                  calibrate=True, delay_s=0.0, v0=0.0):
     """Closed loop with sensors and estimator in the loop. estimator=None uses the true state.
     The applied torque is computed before the sensors are read because the accelerometer
     model needs it, so a new command takes effect on the next physics step."""
+    if fall_rad is None:
+        fall_rad = p.fall_threshold_rad
     rng = np.random.default_rng(seed)
     Ts = 1.0 / rate_hz
     steps_per_ctrl = int(round(Ts / dt))

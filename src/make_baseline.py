@@ -155,7 +155,7 @@ out = {
              "note": "All values use PLACEHOLDER parameters. Regenerate after every params.yaml change."},
     "conditions": {"loop_rate_hz": RATE, "sim_step_s": DT, "estimator": EST,
                    "actuator": "torque mode with limits and friction",
-                   "fall_threshold_rad": 1.3, "noise_seed_list": [1, 2, 3],
+                   "fall_threshold_rad": p.fall_threshold_rad, "noise_seed_list": [1, 2, 3],
                    "recovery_criterion": "no fall and final tilt under 3 deg, "
                                          "final speed under 0.1 m/s for pushes"},
     "controller": {"type": "LQR, state [z, v, theta, thetadot]", "Q_diag": Q, "R": R,

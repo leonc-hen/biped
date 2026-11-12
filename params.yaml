@@ -29,3 +29,6 @@ gyro_noise_rad_s: 0.005         # white noise per sample, rms
 gyro_bias_rad_s: 0.02           # constant bias, about 1.1 deg/s
 accel_noise_ms2: 0.05           # white noise per sample, rms
 encoder_noise_rad_s: 0.05       # wheel speed noise per sample, rms
+
+# --- Safety (Step 12) ---
+fall_threshold_rad: 1.3          # PLACEHOLDER, set with src/fall_threshold.py

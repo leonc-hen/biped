@@ -4,11 +4,13 @@ from model import deriv, rk4
 from actuator import rel_speed, torque_mode
 
 def simulate(p, K, theta0=0.2, v_ref=0.0, rate_hz=500.0, delay_s=0.0,
-             t_end=2.0, dt=1e-4, fall_rad=1.3, limits=True, latency_samples=0, v0=0.0,
+             t_end=2.0, dt=1e-4, fall_rad=None, limits=True, latency_samples=0, v0=0.0,
              com_offset_rad=0.0):
     """Closed loop nonlinear simulation with a discrete controller, a pure delay,
     and the torque mode actuator (current and voltage limits, friction).
     Returns a dict of results."""
+    if fall_rad is None:
+        fall_rad = p.fall_threshold_rad
     Ts = 1.0 / rate_hz
     steps_per_ctrl = int(round(Ts / dt))
     delta = com_offset_rad

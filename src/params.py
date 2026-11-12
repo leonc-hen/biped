@@ -29,6 +29,7 @@ class Params:
     gyro_bias_rad_s: float
     accel_noise_ms2: float
     encoder_noise_rad_s: float
+    fall_threshold_rad: float
 
     # Derived constants of the planar model (see model.py)
     @property
