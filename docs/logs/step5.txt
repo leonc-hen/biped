@@ -1,0 +1,25 @@
+Check 1: controllability rank (need 4): 4
+Check 2: LQR gains and closed loop poles, Q = diag(5, 1, 50, 1)
+   R        K = [z, v, theta, thetadot]            fastest pole (rad/s)
+      1   [ -2.236  -2.63  -10.225  -1.357]      -711.2
+     10   [-0.707 -0.836 -3.503 -0.44 ]      -225.7
+    100   [-0.224 -0.274 -1.42  -0.154]       -74.0
+   1000   [-0.071 -0.103 -0.849 -0.071]       -29.8
+Check 3: delay test, 500 Hz loop, nonlinear sim with limits and friction
+  F = fell or did not settle, . = recovered.  delays in ms: 0 4 8 12 16 20
+  start tilt 0.05 rad
+    R =     1   ..FFFF
+    R =    10   ..FFFF
+    R =   100   .....F
+    R =  1000   ......
+  start tilt 0.2 rad
+    R =     1   ...FFF
+    R =    10   ..FFFF
+    R =   100   .....F
+    R =  1000   FFFFFF
+Check 4: velocity step to 0.3 m/s from rest, R = 100, 500 Hz, no delay
+  final velocity (m/s): 0.313
+  5 percent settling time (s): 3.94
+  peak velocity overshoot (m/s): 0.04
+  peak tilt (rad): 0.029
+  peak total wheel torque (N m): 0.01

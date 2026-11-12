@@ -1,0 +1,18 @@
+Check 1: velocity pushes (robot starts upright, upright command, ideal actuator)
+  push of 0.3 m/s            total 0.082 N m   per motor 0.041 N m (rms 0.005)   0.41 A   power 0.87 W   wheel speed vs body 13.1 rad/s
+  push of 0.6 m/s            total 0.164 N m   per motor 0.082 N m (rms 0.009)   0.82 A   power 3.49 W   wheel speed vs body 26.2 rad/s
+  push of 1.0 m/s            total 0.274 N m   per motor 0.137 N m (rms 0.016)   1.37 A   power 9.69 W   wheel speed vs body 43.6 rad/s
+Check 2: tilt recovery from rest
+  start tilt 0.1 rad         total 0.142 N m   per motor 0.071 N m (rms 0.004)   0.71 A   power 0.26 W   wheel speed vs body 5.1 rad/s
+  start tilt 0.3 rad         total 0.426 N m   per motor 0.213 N m (rms 0.012)   2.13 A   power 2.41 W   wheel speed vs body 15.8 rad/s
+  start tilt 0.6 rad         total 0.852 N m   per motor 0.426 N m (rms 0.028)   4.26 A   power 10.62 W   wheel speed vs body 35.9 rad/s
+Check 3: driving, velocity step from rest
+  velocity command 0.3 m/s   total 0.008 N m   per motor 0.004 N m (rms 0.002)   0.04 A   power 0.04 W   wheel speed vs body 10.2 rad/s
+  velocity command 1.0 m/s   total 0.028 N m   per motor 0.014 N m (rms 0.008)   0.14 A   power 0.48 W   wheel speed vs body 34.0 rad/s
+Check 4: speed needed to drive
+  0.3 m/s needs 10.0 rad/s at the wheel = 95 rpm
+  1.0 m/s needs 33.3 rad/s at the wheel = 318 rpm
+  2.0 m/s needs 66.7 rad/s at the wheel = 637 rpm
+Check 5: standing still with noisy sensors and the estimator in the loop (8 s, 500 Hz)
+  torque rms (total) 0.0010 N m, peak 0.0043 N m, per motor peak current 0.02 A
+Placeholder motor for comparison: torque limit 0.5 N m per motor, 5.0 A, no load speed 240.0 rad/s

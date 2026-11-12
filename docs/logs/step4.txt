@@ -1,0 +1,12 @@
+Check 1: wheel part of yaw inertia
+  direct from kinetic energy: 0.0014700000000000004  formula M_eff*d^2/4: 0.0014700000000000004
+  total yaw inertia: 0.00447 kg m^2
+  yaw gain K: 521.9985085756898 rad/s^2 per N m
+Check 2: yaw rate PI, wn = 15.0 zeta = 1.0  Kp = 0.0575 Ki = 0.431
+  overshoot (percent): 13.602209333564218
+  2 percent settling time (s): 0.358
+  peak differential torque for a 2 rad/s step (N m): 0.11580492857142857
+Check 3: priority. Balance 0.9 N m total, wanted differential 0.4 N m, wheels at rest
+  tau_R = 0.5  tau_L = 0.4  differential scale = 0.24999999999999994
+  balance torque delivered (tau_R + tau_L): 0.9
+  balance 1.4 total (over the 1.0 limit): tau_R = 0.5  tau_L = 0.5  scale = 0.0

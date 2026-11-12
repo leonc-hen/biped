@@ -1,0 +1,12 @@
+Check 1: open loop tilt, start 0.001 rad, zero torque, 0.5 s (pass: under 2 percent)
+  constraint model, timestep 1.00 ms   tilt error 0.89 percent
+  constraint model, timestep 0.50 ms   tilt error 0.39 percent
+  constraint model, timestep 0.25 ms   tilt error 0.17 percent
+  contact model,    timestep 0.50 ms   tilt error 0.30 percent   rolling slip 3.2e-07 m
+Check 2: torque step, 0.05 N m total from rest, 0.15 s (tests the reaction term)
+  constraint model: tilt error 0.35 percent, position error 0.33 percent
+  contact    model: tilt error 0.41 percent, position error 0.38 percent
+  my model WITHOUT the reaction torque vs MuJoCo constraint: tilt error 26 percent (should be large, this is what the check catches)
+Check 3: closed loop LQR, start tilt 0.2 rad, 500 Hz, true state, 1 s
+  constraint model: tilt error 0.15 percent of peak tilt, velocity error 7.00 percent of peak velocity
+  contact    model: tilt error 0.17 percent of peak tilt, velocity error 0.21 percent of peak velocity

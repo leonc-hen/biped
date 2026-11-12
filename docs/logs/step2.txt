@@ -1,0 +1,5 @@
+Check 1: max |A - A_symbolic| = 0.0
+         max |B - B_symbolic| = 1.1368683772161603e-13
+Check 2: open loop poles = [  0.   +0.j   0.   +0.j  15.401+0.j -15.401+0.j]
+Check 3: max energy drift over 1 s (J) = 2.2336132943223674e-11
+Check 4: max tilt difference over 0.3 s (rad) = 0.00061777652493894 relative to final tilt: 0.006122345634665057

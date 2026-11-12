@@ -1,7 +1,7 @@
 {
   "meta": {
-    "created_utc": "2026-11-11T03:25:21+00:00",
-    "git_commit": "48e9aff",
+    "created_utc": "2026-11-12T18:26:33+00:00",
+    "git_commit": "c0c375e",
     "git_uncommitted_changes": true,
     "note": "All values use PLACEHOLDER parameters. Regenerate after every params.yaml change."
   },
@@ -59,7 +59,8 @@
     "gyro_noise_rad_s": 0.005,
     "gyro_bias_rad_s": 0.02,
     "accel_noise_ms2": 0.05,
-    "encoder_noise_rad_s": 0.05
+    "encoder_noise_rad_s": 0.05,
+    "fall_threshold_rad": 1.3
   },
   "results": {
     "1_max_recovered_tilt_rad": 1.2,

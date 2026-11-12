@@ -1,0 +1,10 @@
+Running baseline metrics (this takes several minutes)...
+1_max_recovered_tilt_rad 1.2
+1b_recovery_time_s {'0.3_rad': 0.14020000000000002, '0.9_rad': 1.514}
+2_max_push_m_s 5.5
+3_velocity_tracking {'0.3_m_s': {'settling_time_5pct_s': 4.05, 'overshoot_pct': 12.3, 'final_error_m_s': -0.0003, 'fell': False}, '1.0_m_s': {'settling_time_5pct_s': 4.0, 'overshoot_pct': 12.9, 'final_error_m_s': -0.0004, 'fell': False}}
+4_demands {'recover_0.3_rad': {'peak_torque_per_motor_nm': 0.212, 'rms_torque_per_motor_nm': 0.013, 'peak_current_per_motor_a': 2.12, 'rms_current_per_motor_a': 0.13, 'fell': False}, 'push_0.6_m_s': {'peak_torque_per_motor_nm': 0.082, 'rms_torque_per_motor_nm': 0.0079, 'peak_current_per_motor_a': 0.82, 'rms_current_per_motor_a': 0.079, 'fell': False}, 'drive_1.0_m_s': {'peak_torque_per_motor_nm': 0.043, 'rms_torque_per_motor_nm': 0.0333, 'peak_current_per_motor_a': 0.43, 'rms_current_per_motor_a': 0.333, 'fell': False}}
+5_delay_margin_ms 22
+6_rms_tilt_deg_standing {'noise_x1': 0.0184, 'noise_x3': 0.0553}
+7_energy {'joules_per_meter': 2.668, 'mean_power_w': 2.669, 'copper_w': 0.445, 'mechanical_w': 2.224}
+saved /home/leon_c/biped/baseline_lqr.json  commit c0c375e  uncommitted changes: True

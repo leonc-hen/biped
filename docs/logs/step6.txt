@@ -1,0 +1,21 @@
+Check 1: delay margin versus loop rate (extra delay on top of the sample hold)
+  largest extra delay in ms, scanned 0 to 30 ms in 2 ms steps, stops at first failure
+  start tilt 0.3 rad
+       50 Hz    14 ms   (sample period 20 ms)
+      100 Hz    14 ms   (sample period 10 ms)
+      200 Hz    16 ms   (sample period 5 ms)
+      500 Hz    16 ms   (sample period 2 ms)
+     1000 Hz    18 ms   (sample period 1 ms)
+  start tilt 1.0 rad
+       50 Hz    12 ms   (sample period 20 ms)
+      100 Hz    14 ms   (sample period 10 ms)
+      200 Hz    18 ms   (sample period 5 ms)
+      500 Hz    18 ms   (sample period 2 ms)
+     1000 Hz    20 ms   (sample period 1 ms)
+Check 2: one full sample of latency (command used one tick after the measurement)
+  largest recovered start tilt in rad, scan 0.1 to 1.2
+       50 Hz   0.0
+      100 Hz   1.2
+      200 Hz   1.2
+      500 Hz   1.2
+     1000 Hz   1.2

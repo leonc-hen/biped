@@ -1,0 +1,28 @@
+Check 1: sensor model with noise and bias switched off, robot upright, rolling at 0.5 m/s
+  gyro 0.000 rad/s (expect 0), accel forward 0.000 (expect 0), accel up 9.810 (expect 9.81), wheel speed 16.67 rad/s (expect 16.67)
+Check 2: estimators in the closed loop, 500 Hz, nonlinear sim with limits
+  driving to a velocity command, 10 s run, error measured after the first second
+  velocity command 0.3 m/s
+    true state (reference)         fell=False tilt err rms= 0.00 deg   final v=0.300   max v=0.340
+    comp filter 0.5 s              fell=False tilt err rms= 0.87 deg   final v=0.182   max v=0.444
+    comp filter 2 s                fell=False tilt err rms= 0.27 deg   final v=0.298   max v=0.374
+    0.5 s + encoder compensation   fell=False tilt err rms= 0.02 deg   final v=0.300   max v=0.337
+  velocity command 0.6 m/s
+    true state (reference)         fell=False tilt err rms= 0.00 deg   final v=0.600   max v=0.680
+    comp filter 0.5 s              fell=False tilt err rms= 1.73 deg   final v=0.367   max v=0.884
+    comp filter 2 s                fell=False tilt err rms= 0.55 deg   final v=0.594   max v=0.749
+    0.5 s + encoder compensation   fell=False tilt err rms= 0.03 deg   final v=0.600   max v=0.676
+  velocity command 1.0 m/s
+    true state (reference)         fell=False tilt err rms= 0.00 deg   final v=1.000   max v=1.132
+    comp filter 0.5 s              fell=False tilt err rms= 2.88 deg   final v=0.612   max v=1.470
+    comp filter 2 s                fell=False tilt err rms= 0.93 deg   final v=0.989   max v=1.249
+    0.5 s + encoder compensation   fell=False tilt err rms= 0.03 deg   final v=1.000   max v=1.129
+Check 3: gyro bias, calibrated at startup or not (velocity command 0.3 m/s, 8 s)
+  calibrated at startup: True
+    0.5 s + compensation     tilt err rms=0.03 deg   final v=0.298
+    2 s plain                tilt err rms=0.30 deg   final v=0.300
+    2 s + compensation       tilt err rms=0.03 deg   final v=0.299
+  calibrated at startup: False
+    0.5 s + compensation     tilt err rms=0.58 deg   final v=0.299
+    2 s plain                tilt err rms=1.75 deg   final v=0.296
+    2 s + compensation       tilt err rms=1.94 deg   final v=0.296
