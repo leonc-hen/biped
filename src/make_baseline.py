@@ -1,10 +1,11 @@
+"""Compute the LQR baseline metrics that RL policies are scored against. Writes baseline_lqr.json."""
+import datetime
 import json
 import subprocess
-import datetime
-import numpy as np
-from dataclasses import asdict
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
+
+import numpy as np
 from params import load_params
 from control import design_lqr
 from sim_est import simulate_est
@@ -43,10 +44,10 @@ def tilt_limit():
 def recovery_time(th0):
     """First time after which the true tilt stays within 0.05 rad of upright."""
     r = run(theta0=th0, v_ref=0.0, t_end=6.0)
-    t = (np.arange(len(r["theta"])) + 1) * DT
-    outside = np.where(np.abs(r["theta"]) > 0.05)[0]
     if r["fell"]:
         return None
+    t = (np.arange(len(r["theta"])) + 1) * DT
+    outside = np.where(np.abs(r["theta"]) > 0.05)[0]
     return float(t[outside[-1]] + DT) if len(outside) else 0.0
 
 # ---- 2. Largest survived push ----
@@ -96,7 +97,8 @@ def delay_margin():
 def noise_rms(scale):
     vals = []
     for seed in [1, 2, 3]:
-        pn = replace(p, gyro_noise_rad_s=p.gyro_noise_rad_s * scale, accel_noise_ms2=p.accel_noise_ms2 * scale,
+        pn = replace(p, gyro_noise_rad_s=p.gyro_noise_rad_s * scale,
+                     accel_noise_ms2=p.accel_noise_ms2 * scale,
                      encoder_noise_rad_s=p.encoder_noise_rad_s * scale)
         r = run(pn, theta0=0.0, v_ref=0.0, t_end=8.0, seed=seed)
         th = r["theta"][int(1.0 / DT):]
@@ -114,8 +116,10 @@ def energy_per_meter(vref=1.0):
     lo, hi = int(8.0 / DT), len(P)                   # cruise window, 8 s to 12 s
     energy = float(np.sum(P[lo:hi]) * DT)
     dist = float(np.sum(r["v"][lo:hi]) * DT)
-    return {"joules_per_meter": round(energy / dist, 3), "mean_power_w": round(energy / (hi - lo) / DT, 3),
-            "copper_w": round(float(np.mean(copper[lo:hi])), 3), "mechanical_w": round(float(np.mean(mech[lo:hi])), 3)}
+    return {"joules_per_meter": round(energy / dist, 3),
+            "mean_power_w": round(energy / (hi - lo) / DT, 3),
+            "copper_w": round(float(np.mean(copper[lo:hi])), 3),
+            "mechanical_w": round(float(np.mean(mech[lo:hi])), 3)}
 
 def git_info():
     def g(*a):
@@ -126,27 +130,36 @@ def git_info():
         return "unknown", None
 
 print("Running baseline metrics (this takes several minutes)...")
+METRICS = [
+    ("1_max_recovered_tilt_rad", tilt_limit),
+    ("1b_recovery_time_s", lambda: {"0.3_rad": recovery_time(0.3), "0.9_rad": recovery_time(0.9)}),
+    ("2_max_push_m_s", push_limit),
+    ("3_velocity_tracking", lambda: {"0.3_m_s": tracking(0.3), "1.0_m_s": tracking(1.0)}),
+    ("4_demands", lambda: {
+        "recover_0.3_rad": scenario_demand(theta0=0.3, v_ref=0.0, t_end=4.0),
+        "push_0.6_m_s": scenario_demand(theta0=0.0, v0=0.6, v_ref=0.0, t_end=4.0),
+        "drive_1.0_m_s": scenario_demand(theta0=0.0, v_ref=1.0, t_end=12.0)}),
+    ("5_delay_margin_ms", delay_margin),
+    ("6_rms_tilt_deg_standing", lambda: {"noise_x1": noise_rms(1), "noise_x3": noise_rms(3)}),
+    ("7_energy", energy_per_meter),
+]
 res = {}
-res["1_max_recovered_tilt_rad"] = tilt_limit();                  print("1 tilt limit", res["1_max_recovered_tilt_rad"])
-res["1b_recovery_time_s"] = {"0.3_rad": recovery_time(0.3), "0.9_rad": recovery_time(0.9)}; print("1b", res["1b_recovery_time_s"])
-res["2_max_push_m_s"] = push_limit();                            print("2 push limit", res["2_max_push_m_s"])
-res["3_velocity_tracking"] = {"0.3_m_s": tracking(0.3), "1.0_m_s": tracking(1.0)}; print("3", res["3_velocity_tracking"])
-res["4_demands"] = {"recover_0.3_rad": scenario_demand(theta0=0.3, v_ref=0.0, t_end=4.0),
-                    "push_0.6_m_s": scenario_demand(theta0=0.0, v0=0.6, v_ref=0.0, t_end=4.0),
-                    "drive_1.0_m_s": scenario_demand(theta0=0.0, v_ref=1.0, t_end=12.0)}; print("4", res["4_demands"])
-res["5_delay_margin_ms"] = delay_margin();                       print("5 delay margin", res["5_delay_margin_ms"])
-res["6_rms_tilt_deg_standing"] = {"noise_x1": noise_rms(1), "noise_x3": noise_rms(3)}; print("6", res["6_rms_tilt_deg_standing"])
-res["7_energy"] = energy_per_meter();                            print("7", res["7_energy"])
+for key, metric in METRICS:
+    res[key] = metric()
+    print(key, res[key])
 
 commit, dirty = git_info()
 out = {
     "meta": {"created_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
              "git_commit": commit, "git_uncommitted_changes": dirty,
              "note": "All values use PLACEHOLDER parameters. Regenerate after every params.yaml change."},
-    "conditions": {"loop_rate_hz": RATE, "sim_step_s": DT, "estimator": EST, "actuator": "torque mode with limits and friction",
-                   "fall_threshold_rad": 1.3, "noise_seed_list": [1, 2, 3], "recovery_criterion":
-                   "no fall and final tilt under 3 deg, final speed under 0.1 m/s for pushes"},
-    "controller": {"type": "LQR, state [z, v, theta, thetadot]", "Q_diag": Q, "R": R, "K": [round(float(k), 6) for k in K.ravel()]},
+    "conditions": {"loop_rate_hz": RATE, "sim_step_s": DT, "estimator": EST,
+                   "actuator": "torque mode with limits and friction",
+                   "fall_threshold_rad": 1.3, "noise_seed_list": [1, 2, 3],
+                   "recovery_criterion": "no fall and final tilt under 3 deg, "
+                                         "final speed under 0.1 m/s for pushes"},
+    "controller": {"type": "LQR, state [z, v, theta, thetadot]", "Q_diag": Q, "R": R,
+                   "K": [round(float(k), 6) for k in K.ravel()]},
     "params": asdict(p),
     "results": res,
 }

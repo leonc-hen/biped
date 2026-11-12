@@ -1,5 +1,7 @@
-from params import load_params
+"""Print the derived model constants and the open loop unstable pole."""
 import math
+
+from params import load_params
 
 p = load_params()
 print("M_eff", p.m_eff, "a", p.a, "b", p.b, "J", p.J, "D", p.D)

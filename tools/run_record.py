@@ -8,7 +8,8 @@ from pathlib import Path
 def git_commit():
     try:
         return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], text=True
+            ["git", "rev-parse", "--short", "HEAD"], text=True,
+            cwd=Path(__file__).resolve().parent.parent, stderr=subprocess.DEVNULL,
         ).strip()
     except Exception:
         return "unknown"

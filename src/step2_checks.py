@@ -1,3 +1,4 @@
+"""Step 2 checks: symbolic derivation, open loop poles, energy conservation, linear vs nonlinear."""
 import numpy as np
 import sympy as sp
 from params import load_params

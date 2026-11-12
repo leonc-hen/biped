@@ -1,8 +1,10 @@
+"""Design the baseline LQR and record it in gain_table.json (one entry per name)."""
 import json
-import numpy as np
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
+
+import numpy as np
 from params import load_params
 from control import design_lqr
 

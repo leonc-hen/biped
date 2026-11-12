@@ -1,3 +1,4 @@
+"""Planar wheeled inverted pendulum: linearization, nonlinear dynamics, RK4, energy."""
 import numpy as np
 
 def linear_AB(p):
@@ -29,6 +30,7 @@ def deriv(p, s, tau):
     return np.array([xd, xdd, thd, thdd])
 
 def rk4(f, s, dt):
+    """One classic fourth order Runge-Kutta step of ds/dt = f(s)."""
     k1 = f(s)
     k2 = f(s + 0.5 * dt * k1)
     k3 = f(s + 0.5 * dt * k2)
@@ -36,7 +38,8 @@ def rk4(f, s, dt):
     return s + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
 def energy(p, s):
-    x, xd, th, thd = s
+    """Total mechanical energy (kinetic plus potential), used to check the integrator."""
+    _, xd, th, thd = s
     a, b, J = p.a, p.b, p.J
     k = p.body_mass_kg * p.gravity_ms2 * p.axle_to_com_m
     T = 0.5 * a * xd**2 + b * np.cos(th) * xd * thd + 0.5 * J * thd**2

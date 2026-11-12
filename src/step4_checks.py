@@ -1,3 +1,4 @@
+"""Step 4 checks: yaw inertia, yaw rate PI response, and balance priority in the torque split."""
 import numpy as np
 from params import load_params
 from yaw import yaw_inertia, yaw_gain, design_rate_pi, split_torque

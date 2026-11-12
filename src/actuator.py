@@ -1,3 +1,4 @@
+"""Wheel motor model: torque and voltage command modes with current, voltage and friction limits."""
 import numpy as np
 
 def rel_speed(p, s):
@@ -8,7 +9,7 @@ def torque_limit(p, w_rel, direction):
     """Largest torque magnitude one motor can deliver in `direction` (+1 or -1)."""
     Kt, Ke, R = p.motor_kt_nm_per_a, p.motor_ke_vs_per_rad, p.winding_resistance_ohm
     V, I = p.battery_voltage_v, p.current_limit_a
-    if direction * w_rel > 0:                      # motoring: back EMF eats voltage
+    if direction * w_rel > 0:                      # motoring: back EMF reduces the available voltage
         i_volt = max((V - Ke * abs(w_rel)) / R, 0.0)
         return Kt * min(I, i_volt)
     return Kt * I                                  # braking: current limit only

@@ -1,3 +1,4 @@
+"""Step 5 checks: controllability, LQR gains versus R, delay tolerance, velocity step."""
 import numpy as np
 from params import load_params
 from control import design_lqr, controllability_rank

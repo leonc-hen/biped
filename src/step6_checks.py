@@ -1,3 +1,4 @@
+"""Step 6 checks: delay margin and tilt recovery versus control loop rate."""
 import numpy as np
 from params import load_params
 from control import design_lqr

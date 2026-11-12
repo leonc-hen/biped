@@ -1,9 +1,9 @@
-"""Single entry point for reading params/params.yaml."""
+"""Loader for the Phase 0 robot description (phase0_params.yaml), used by the MJCF builder."""
 from pathlib import Path
 
 import yaml
 
-PARAMS_PATH = Path(__file__).resolve().parent.parent / "params" / "params.yaml"
+PARAMS_PATH = Path(__file__).resolve().parent.parent / "phase0_params.yaml"
 
 
 def load_params(path=PARAMS_PATH):

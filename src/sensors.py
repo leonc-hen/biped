@@ -1,13 +1,14 @@
+"""Simulated IMU (gyro and accelerometer) and wheel encoders for the planar model."""
 import numpy as np
 from model import deriv
 
 def read_sensors(p, s, tau, rng):
     """Simulated IMU and encoders at the instant the state is s and the wheel torque is tau.
     Returns (gyro, ax_body, az_body, wheel_speed_relative_to_body)."""
-    x, xd, th, thd = s
+    _, xd, th, thd = s
     h, g, r = p.imu_height_m, p.gravity_ms2, p.wheel_radius_m
     _, xdd, _, thdd = deriv(p, s, tau)
-    # World acceleration of the IMU point (x forward, y up)
+    # World acceleration of the IMU point (planar: x forward, y up)
     ax = xdd + h * np.cos(th) * thdd - h * np.sin(th) * thd**2
     ay = -h * np.sin(th) * thdd - h * np.cos(th) * thd**2
     # Specific force (what an accelerometer feels) is acceleration minus gravity

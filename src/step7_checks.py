@@ -1,3 +1,4 @@
+"""Step 7 checks: sensor model and complementary filter estimator in the closed loop."""
 import numpy as np
 from dataclasses import replace
 from params import load_params

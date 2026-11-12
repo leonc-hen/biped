@@ -1,3 +1,4 @@
+"""Step 9 checks: robustness of the nominal LQR gains to parameter, payload, noise and delay changes."""
 import numpy as np
 from dataclasses import replace
 from params import load_params

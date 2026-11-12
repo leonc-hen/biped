@@ -31,8 +31,7 @@ Every joint axis is +y in the body frame. Positive rotation follows the right ha
 
 Left and right joints use the same sign in all code (no negation).
 Physical motor mirroring is handled only in firmware, at the hardware boundary.
-Sketch: docs/figures/joint_conventions.png
-![Joint conventions] (figures/joint_conventions.png)
+![Joint conventions](figures/joint_conventions.png)
 
 ## Quaternions
 Order inside our code: w, x, y, z (the MuJoCo order).

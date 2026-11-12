@@ -1,3 +1,4 @@
+"""Step 8 checks: actuator torque, current, power and speed demanded by the balance controller."""
 import numpy as np
 from params import load_params
 from control import design_lqr

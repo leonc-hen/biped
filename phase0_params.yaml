@@ -1,5 +1,5 @@
-# Single source of truth for the robot. SI units only. Rough starting guesses.
-# Read by model/build_mjcf.py now, by the Phase 1 LQR script, and later by CAD and firmware.
+# Phase 0 robot description (legs, wheels, joints). SI units only. Placeholder values.
+# Read by model/build_mjcf.py through tools/params.py. The Phase 1 LQR model reads params.yaml.
 meta:
   name: biped
   version: 1
@@ -63,9 +63,3 @@ contact:
 
 battery:
   nominal_voltage_V: 24.0
-
-gravity_ms2: 9.81
-wheel_inertia_total_kgm2: 9.0e-5   # both wheels, solid discs: 2 * 0.5 * 0.10 kg * 0.03^2
-motor_ke_vs_per_rad: 0.10          # back EMF constant, equals Kt in SI units
-viscous_friction_nm_s_per_rad: 0.0 # per motor, set to 0 for the baseline check, add in step 4
-yaw_body_inertia_kgm2: 0.003

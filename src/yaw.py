@@ -1,3 +1,4 @@
+"""Yaw dynamics, yaw rate PI design, and the balance-priority split of right and left wheel torque."""
 import numpy as np
 from actuator import torque_limit
 

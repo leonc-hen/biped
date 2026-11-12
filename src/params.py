@@ -1,6 +1,10 @@
-import yaml
+"""Phase 1 parameters (params.yaml) as a frozen dataclass with derived model constants."""
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
+
+PARAMS_PATH = Path(__file__).resolve().parent.parent / "params.yaml"
 
 @dataclass(frozen=True)
 class Params:
@@ -26,7 +30,7 @@ class Params:
     accel_noise_ms2: float
     encoder_noise_rad_s: float
 
-    # Derived quantities, used by the model in step 2
+    # Derived constants of the planar model (see model.py)
     @property
     def m_eff(self):
         return self.wheel_mass_total_kg + self.wheel_inertia_total_kgm2 / self.wheel_radius_m**2
@@ -47,15 +51,18 @@ class Params:
     def D(self):
         return self.a * self.J - self.b**2
 
-def load_params(path="params.yaml") -> Params:
-    with open(Path(path)) as f:
+def load_params(path=PARAMS_PATH) -> Params:
+    with open(path) as f:
         raw = yaml.safe_load(f)
-    p = Params(**raw)          # fails loudly if a key is missing or extra
+    p = Params(**raw)          # raises TypeError on a missing or unknown key
     validate(p)
     return p
 
 def validate(p: Params):
     for name, value in p.__dict__.items():
-        assert value >= 0, f"{name} must not be negative"
-    assert p.wheel_radius_m > 0 and p.axle_to_com_m > 0 and p.body_mass_kg > 0
-    assert p.D > 0, "D = a*J - b^2 must be positive for a physical robot"
+        if value < 0:
+            raise ValueError(f"{name} must not be negative")
+    if not (p.wheel_radius_m > 0 and p.axle_to_com_m > 0 and p.body_mass_kg > 0):
+        raise ValueError("wheel_radius_m, axle_to_com_m and body_mass_kg must be positive")
+    if p.D <= 0:
+        raise ValueError("D = a*J - b^2 must be positive for a physical robot")

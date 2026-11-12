@@ -1,3 +1,4 @@
+"""Complementary filter tilt and velocity estimator, and startup gyro bias calibration."""
 import numpy as np
 
 class ComplementaryEstimator:

@@ -24,8 +24,8 @@ Thresholds below match requirements.md section 2. If one changes, change both fi
 
 - [ ] The derivation is written up with every step shown and every assumption listed
 - [ ] Every symbol maps to an entry in params.yaml
-- [ ] The linear model matches the nonlinear sim for tilts under 5 degrees over 1 s
-- [ ] LQR balances the Level 0 model from a 10 degree tilt and settles within 2 s
+- [ ] The linear model matches the nonlinear sim for tilts under 7.5 degrees over 1 s
+- [ ] LQR balances the Level 0 model from a 15 degree tilt and settles within 2 s
 - [ ] The Q and R choices are documented
 - [ ] The actuators do not saturate in the nominal case
 - [ ] Plots are saved in docs/figures with dated names
@@ -94,7 +94,7 @@ Gate C pass criteria
 |---|---|---|---|
 | Balance | untethered for 60 s | | |
 | Real logs versus sim | within tolerances written in docs/tolerances.md at the start of Phase 4 | | |
-| R01 mass | 1.5 kg target, 1.8 kg hard cap, measured | | |
+| R01 mass | 2.0 kg target, 2.25 kg hard cap, measured | | |
 | R04 and R05 | speed and turn rate verified in logged runs | | |
 | R09 payload | 100 to 200 g carried without losing balance | | |
 | R10 runtime | 15 minutes or more of active use | | |

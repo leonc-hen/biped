@@ -1,4 +1,4 @@
-"""Generate the MJCF model from params/params.yaml. Never hand edit the XML.
+"""Generate the MJCF model from phase0_params.yaml. Never hand edit the XML.
 
 Conventions (docs/conventions.md): x forward, y left, z up. Every joint axis is +y.
 Positive hip and knee swing the foot backward. Positive wheel rotation rolls forward.
@@ -48,7 +48,7 @@ def build_xml(p):
     wheel_armature = wm["rotor_inertia_kgm2"] * wm["gear_ratio"] ** 2
 
     root = ET.Element("mujoco", model=p["meta"]["name"])
-    root.append(ET.Comment(" GENERATED FROM params/params.yaml. DO NOT EDIT. "))
+    root.append(ET.Comment(" GENERATED FROM phase0_params.yaml. DO NOT EDIT. "))
     ET.SubElement(root, "compiler", angle="radian", autolimits="true")
     ET.SubElement(
         root, "option",

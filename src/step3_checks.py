@@ -1,3 +1,4 @@
+"""Step 3 checks: motor torque limits, saturation, and open loop poles in torque and voltage mode."""
 import numpy as np
 from params import load_params
 from model import linear_AB

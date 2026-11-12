@@ -1,3 +1,4 @@
+"""LQR design for the balance controller."""
 import numpy as np
 from scipy.linalg import solve_continuous_are
 from model import linear_AB
@@ -15,6 +16,7 @@ def design_lqr(p, Q, R):
     return K, A - B @ K
 
 def controllability_rank(p):
+    """Rank of the controllability matrix [B, AB, A^2 B, A^3 B]. Full rank is 4."""
     A, B = linear_AB(p)
     C = np.hstack([np.linalg.matrix_power(A, i) @ B for i in range(4)])
     return np.linalg.matrix_rank(C)

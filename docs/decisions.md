@@ -16,7 +16,6 @@ Fallbacks, in order: (1) add a third joint per leg; (2) change the body shape so
 Revisit trigger: if R08 (fall recovery) is below 90 percent under randomization in early Phase 2 tests.
 
 ### D02 Compute
-### D02 Compute
 Status: Decided
 Decision: an STM32 microcontroller with a hardware floating point unit and a CAN peripheral runs the low level control and the policy. Starting recommendation: an STM32G4 series part (for example the G474, which has FDCAN, a Cortex-M4F core at 170 MHz, and math accelerators). Verify the exact part and a dev board before buying. A UART port is reserved for an optional companion computer (for example a Raspberry Pi) for vision later, using the same policy interface.
 Reasons: a two layer, 64 unit network is tiny and runs easily at 100 to 200 Hz on a core with a floating point unit; hard real time timing with hardware timers and DMA gives more predictable latency for R11 and R12; FDCAN gives faster bus rates; matches the embedded C++ learning goal; large ecosystem and a clear upgrade path (an H7 part if more compute is needed).
@@ -26,7 +25,7 @@ Revisit trigger: if firmware timing cannot meet R11 and R12, move to a higher pe
 
 ### D03 Actuator bus
 Status: Decided
-Decision: CAN. The STM32 CAN peripheral (FDCAN on G4 parts) needs an external 3.3 V CAN transceiver chip, so add one to the parts list (verify the exact part before buying).CubeMars AK actuators support servo and MIT control modes.
+Decision: CAN. The STM32 CAN peripheral (FDCAN on G4 parts) needs an external 3.3 V CAN transceiver chip, so add one to the parts list (verify the exact part before buying). CubeMars AK actuators support servo and MIT control modes.
 Bus load estimate (my rough calculation, verify): six actuators, one command frame and one reply frame each per 10 ms policy step, about 130 bits per frame, gives about 1560 bits per step, or about 16 percent of a 1 Mbps bus.
 Rejected: UART or RS485 per actuator (more wiring, lower rates); hobby PWM servos (no torque feedback).
 Revisit trigger: if bus load, wiring noise or frame loss shows up in bring up.
@@ -119,3 +118,8 @@ Total                                 ___ ms
    payload offset (robot leans back and creeps about 0.7 m; compensate arm CoM), then Kt.
    Delay margin with estimator about 22 ms. Keep the 5 ms latency target.
    Not yet run: Coulomb friction, backlash, slope, combined sweeps.
+
+      Baseline: baseline_lqr.json holds 7 metrics for LQR R=100 with estimator, noise,
+   limits, 500 Hz. RL must be scored under identical conditions. Metrics 1 and 2 are
+   limited by the placeholder 1.3 rad fall threshold. Set it from CAD and regenerate.
+   Metric 7 is dominated by placeholder friction. Regenerate after any params change.
