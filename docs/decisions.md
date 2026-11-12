@@ -57,6 +57,58 @@ Reasons: one implementation means no drift between debugging and training; pure 
 Rejected: separate numpy and JAX versions (they drift apart).
 Revisit trigger: if the Playground environment structure makes this awkward when you read it in Phase 2.
 
+2026-11-12  R08  old: back or side  new: back or front, side falls prevented  see D08
+### D08 Side fall recovery route (upholds R08 as written)
+Status: Decided (recorded 2026-11-12; ratify in the Gate A report)
+Decision: R08 keeps "up from back or side within 10 s, 90 percent".
+Side recovery is achieved by D01 fallback 2, a self righting body shape:
+the shell cross section is rounded or chamfered so that side lying is
+unstable, and the policy rolls the body onto its front or back using leg
+pumping and wheel torque, then runs the normal get up. The shell profile
+becomes a Phase 2 design variable in params.yaml, verified in simulation.
+Reasons: fallback 1 (third joint per leg) adds roughly 240 g and two
+actuators, which breaks R01 on top of D09; fallback 3 (arm as prop) makes
+a core requirement depend on a stretch item.
+Rejected: narrowing R08 to front and back only (user decision, 2026-11-12).
+Revisit trigger: if S4 side recovery stays under 90 percent at Level 3
+after at least two shell profile iterations, escalate to fallback 1 and
+reopen the R01 mass cap at a recorded gate decision.
+
+### D09 Leg actuator class
+Status: Decided
+Decision: the CubeMars AK MIT command format (position, velocity, kp, kd,
+feedforward torque) stays as the control interface reference for D03 and
+D04, but AK actuators are not purchase candidates. Candidates must be
+150 g or less per actuator with roughly 1 to 3 N m peak torque. Shortlist
+directions for the 2.9 sizing passes: small gimbal motor plus planetary
+quasi direct drive units (MyActuator RMD L small sizes, GIM style), DJI
+M2006 with C610 driver (about 90 g, CAN, current control), and a serial
+bus servo tier (Feetech STS or Dynamixel XL) as the budget fallback,
+accepting degraded torque control and likely giving up R06.
+Reason: four AK class actuators at roughly 300 g each is about 1.2 kg,
+which breaks R01 (1.5 kg target) before the body, battery, wheels or arm
+exist.
+Accepted variation to D04: if the chosen driver has no internal position
+loop (the M2006 route), the fixed gain PD runs in STM32 firmware at the
+inner loop rate instead of in the driver. The policy interface is
+unchanged.
+Revisit trigger: if no sub 150 g candidate clears the 2.9 sizing targets
+with 30 percent headroom, raise the mass cap question at Gate A before
+raising the actuator class.
+
+### D10 Pinned simulation stack
+Status: Decided
+Decision: exact versions of mujoco, mujoco-mjx, jax, mujoco_playground and
+the NVIDIA driver are recorded in the build log and committed in
+requirements.lock.txt. No upgrades mid phase. Any upgrade is a new
+decision entry and requires rerunning the 2.5 parity test before further
+training.
+Reason: closes the open Phase 0 gate item (exact versions were never
+recorded) and prevents silent physics changes under trained policies.
+Known risk carried from Phase 0: JAX on the RTX 5060 (Blackwell, sm_120)
+is unverified; JAX must report a gpu backend before any training run
+counts.
+
 ## Deferred to Phase 2 data (decide at Gate A)
 
 Leg topology (knee motor at the knee, or both motors at the hip with a linkage to keep the leg light); exact actuator models and gear ratios; leg lengths; wheel size; battery capacity.

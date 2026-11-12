@@ -1,0 +1,83 @@
+# Legged robot description (legs, wheels, joints). SI units only. Placeholder values.
+# Source of truth for the Phase 2 legged model. Read by model/build_mjcf.py through
+# tools/params.py. The Phase 1 planar model reads params.yaml, which is DERIVED from
+# this file by src/planar_from_legged.py. Edit numbers here, never in params.yaml.
+meta:
+  name: biped
+  version: 2
+
+sim:
+  physics_dt_s: 0.002
+  policy_dt_s: 0.01
+  gravity_mps2: 9.81
+  spawn_clearance_m: 0.002
+
+pose:                          # NEW
+  nominal_hip_height_m: 0.19   # mid working height, axle under the hip
+
+body:
+  mass_kg: 0.90
+  size_m: [0.12, 0.12, 0.06]
+  com_height_above_hips_m: 0.04
+  inertia_kgm2: [0.00135, 0.00135, 0.00216]
+  hip_separation_m: 0.14
+
+shell:                         # NEW, D08 self righting profile, placeholder geometry
+  mass_kg: 0.10                # both side rails together
+  side_radius_m: 0.045         # must exceed half the body height (0.03) to define the roll
+  length_m: 0.10
+  y_offset_m: 0.06             # each rail center from the body midline
+  z_offset_m: 0.0
+
+arm:                           # NEW, locked arm placeholder for S5; real arm is a later phase
+  mass_kg: 0.12
+  com_above_hips_m: 0.10
+
+thigh:
+  mass_kg: 0.12
+  length_m: 0.11
+  radius_m: 0.01
+  inertia_kgm2: [0.000121, 0.000121, 0.000006]
+
+shank:
+  mass_kg: 0.06
+  length_m: 0.11
+  radius_m: 0.008
+  inertia_kgm2: [0.0000605, 0.0000605, 0.000003]
+
+wheel:
+  mass_kg: 0.12
+  radius_m: 0.03
+  width_m: 0.02
+  inertia_kgm2: [0.000031, 0.000054, 0.000031]
+
+joints:
+  hip: {range_rad: [-1.0, 1.5]}
+  knee: {range_rad: [-0.1, 2.4]}
+  damping_Nms_per_rad: 0.01
+  frictionloss_Nm: 0.005
+
+leg_motor:
+  gear_ratio: 9.0
+  rotor_inertia_kgm2: 0.000002
+  peak_torque_Nm: 3.0
+  max_speed_rad_s: 20.0        # NEW, output side, placeholder for the speed dependent limit
+  kp_Nm_per_rad: 15.0
+  kv_Nms_per_rad: 0.4
+  torque_constant_Nm_per_A: 0.1
+  resistance_ohm: 0.3
+
+wheel_motor:
+  gear_ratio: 1.0
+  rotor_inertia_kgm2: 0.00002
+  peak_torque_Nm: 0.4
+  max_speed_rad_s: 50.0        # NEW, 1.0 m/s on a 30 mm wheel needs 33 rad/s
+  torque_constant_Nm_per_A: 0.05
+  resistance_ohm: 0.5
+
+contact:
+  floor_friction: [1.0, 0.005, 0.0001]
+  wheel_friction: [1.0, 0.005, 0.0001]
+
+battery:
+  nominal_voltage_V: 24.0

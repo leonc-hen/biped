@@ -39,7 +39,7 @@ def validate(p):
 
 def build_xml(p):
     validate(p)
-    sim, b, th, sh, wh = p["sim"], p["body"], p["thigh"], p["shank"], p["wheel"]
+    sim, b, th, sh, wh, sl, ar = p["sim"], p["body"], p["thigh"], p["shank"], p["wheel"], p["shell"], p["arm"]
     jt, lm, wm, ct = p["joints"], p["leg_motor"], p["wheel_motor"], p["contact"]
     hip_y = b["hip_separation_m"] / 2
     com_h = b["com_height_above_hips_m"]
@@ -76,7 +76,26 @@ def build_xml(p):
         contype=BODY_PART, conaffinity="0", rgba="0.55 0.6 0.75 1",
     )
     ET.SubElement(torso, "site", name="imu", pos=fmt(0, 0, com_h), size="0.005")
+        # D08 shell rails and the locked arm placeholder. Mass only for now; the
+    # inertia is inferred from the geometry, so no explicit inertial element.
+    for side, ysign in (("l", 1), ("r", -1)):
+        rail = ET.SubElement(
+            torso, "body", name=f"shell_{side}",
+            pos=fmt(0, ysign * sl["y_offset_m"], sl["z_offset_m"]),
+        )
+        ET.SubElement(
+            rail, "geom", name=f"shell_{side}_geom", type="capsule",
+            fromto=fmt(-sl["length_m"] / 2, 0, 0, sl["length_m"] / 2, 0, 0),
+            size=fmt(sl["side_radius_m"]), mass=fmt(sl["mass_kg"] / 2),
+            contype=BODY_PART, conaffinity="0", rgba="0.3 0.3 0.6 1",
+        )
 
+    arm_body = ET.SubElement(torso, "body", name="arm_mass", pos=fmt(0, 0, ar["com_above_hips_m"]))
+    ET.SubElement(
+        arm_body, "geom", name="arm_mass_geom", type="sphere", size=fmt(0.02),
+        mass=fmt(ar["mass_kg"]), contype=BODY_PART, conaffinity="0",
+        rgba="0.6 0.3 0.3 1",
+    )
     for side, sy in (("l", hip_y), ("r", -hip_y)):
         thigh = ET.SubElement(torso, "body", name=f"thigh_{side}", pos=fmt(0, sy, 0))
         ET.SubElement(
