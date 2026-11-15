@@ -79,7 +79,7 @@ def build_xml(p, mode = "position"):
         contype=BODY_PART, conaffinity="0", rgba="0.55 0.6 0.75 1",
     )
     ET.SubElement(torso, "site", name="imu", pos=fmt(0, 0, com_h), size="0.005")
-        # D08 shell rails and the locked arm placeholder. Mass only for now; the
+    # D08 shell rails and the locked arm placeholder. Mass only for now; the
     # inertia is inferred from the geometry, so no explicit inertial element.
     for side, ysign in (("l", 1), ("r", -1)):
         rail = ET.SubElement(
@@ -93,10 +93,12 @@ def build_xml(p, mode = "position"):
             contype=BODY_PART, conaffinity="0", rgba="0.3 0.3 0.6 1",
         )
 
+    # Arm is pure mass with no contact. The real arm collision geometry arrives
+    # with the Phase 3 CAD.
     arm_body = ET.SubElement(torso, "body", name="arm_mass", pos=fmt(0, 0, ar["com_above_hips_m"]))
     ET.SubElement(
         arm_body, "geom", name="arm_mass_geom", type="sphere", size=fmt(0.02),
-        mass=fmt(ar["mass_kg"]), contype=BODY_PART, conaffinity="0",
+        mass=fmt(ar["mass_kg"]), contype="0", conaffinity="0",
         rgba="0.6 0.3 0.3 1",
     )
     for side, sy in (("l", hip_y), ("r", -hip_y)):

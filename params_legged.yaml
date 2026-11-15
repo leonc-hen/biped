@@ -24,7 +24,7 @@ body:
 
 shell:                         # NEW, D08 self righting profile, placeholder geometry
   mass_kg: 0.10                # both side rails together
-  side_radius_m: 0.045         # must exceed half the body height (0.03) to define the roll
+  side_radius_m: 0.055        # must exceed half the body height (0.03) to define the roll
   length_m: 0.10
   y_offset_m: 0.06             # each rail center from the body midline
   z_offset_m: 0.0
