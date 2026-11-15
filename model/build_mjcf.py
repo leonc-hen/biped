@@ -6,8 +6,9 @@ Left and right legs use identical signs.
 """
 import xml.etree.ElementTree as ET
 from pathlib import Path
+import math 
 
-from tools.params import load_params
+from tools.params import load_params, leg_ik, height_range
 
 OUT_PATH = Path(__file__).resolve().parent / "generated" / "biped.xml"
 
@@ -37,7 +38,9 @@ def validate(p):
             raise ValueError(f"{joint}: range must be increasing")
 
 
-def build_xml(p):
+def build_xml(p, mode = "position"):
+    if mode not in ("position", "torque"):
+        raise ValueError(f"unknown actuator mode {mode}")
     validate(p)
     sim, b, th, sh, wh, sl, ar = p["sim"], p["body"], p["thigh"], p["shank"], p["wheel"], p["shell"], p["arm"]
     jt, lm, wm, ct = p["joints"], p["leg_motor"], p["wheel_motor"], p["contact"]
@@ -132,8 +135,9 @@ def build_xml(p):
         wheel = ET.SubElement(shank, "body", name=f"wheel_{side}", pos=fmt(0, 0, -sh["length_m"]))
         ET.SubElement(
             wheel, "joint", name=f"wheel_{side}", type="hinge", axis="0 1 0",
-            damping=fmt(jt["damping_Nms_per_rad"]), armature=fmt(wheel_armature),
+            damping=fmt(jt["wheel_damping_Nms_per_rad"]), armature=fmt(wheel_armature),
         )
+        
         ET.SubElement(
             wheel, "inertial", pos="0 0 0",
             mass=fmt(wh["mass_kg"]), diaginertia=fmt(*wh["inertia_kgm2"]),
@@ -149,12 +153,19 @@ def build_xml(p):
     for side in ("l", "r"):
         for jn in ("hip", "knee"):
             lo, hi = jt[jn]["range_rad"]
-            ET.SubElement(
-                act, "position", name=f"{jn}_{side}_pos", joint=f"{jn}_{side}",
-                kp=fmt(lm["kp_Nm_per_rad"]), kv=fmt(lm["kv_Nms_per_rad"]),
-                ctrlrange=fmt(lo, hi),
-                forcerange=fmt(-lm["peak_torque_Nm"], lm["peak_torque_Nm"]),
-            )
+            if mode == "position":
+                ET.SubElement(
+                    act, "position", name=f"{jn}_{side}_pos", joint=f"{jn}_{side}",
+                    kp=fmt(lm["kp_Nm_per_rad"]), kv=fmt(lm["kv_Nms_per_rad"]),
+                    ctrlrange=fmt(lo, hi),
+                    forcerange=fmt(-lm["peak_torque_Nm"], lm["peak_torque_Nm"]),
+                )
+            else:
+                ET.SubElement(
+                    act, "motor", name=f"{jn}_{side}_torque", joint=f"{jn}_{side}",
+                    gear="1",
+                    ctrlrange=fmt(-lm["peak_torque_Nm"], lm["peak_torque_Nm"]),
+                )
         ET.SubElement(
             act, "motor", name=f"wheel_{side}_torque", joint=f"wheel_{side}", gear="1",
             ctrlrange=fmt(-wm["peak_torque_Nm"], wm["peak_torque_Nm"]),
@@ -164,16 +175,44 @@ def build_xml(p):
     ET.SubElement(sensors, "framequat", name="orientation", objtype="site", objname="imu")
     ET.SubElement(sensors, "gyro", name="gyro", site="imu")
     ET.SubElement(sensors, "accelerometer", name="accel", site="imu")
+    # Phase 2 keyframes. The lying poses are approximate spawn states; the check
+    # scripts settle them under gravity before measuring anything.
+    H_nom = p["pose"]["nominal_hip_height_m"]
+    q1, q2 = leg_ik(p, H_nom)
+    H_lo = height_range(p)[0] + 0.01
+    c1, c2 = leg_ik(p, H_lo)
+    clr = sim["spawn_clearance_m"]
+    s2 = math.sqrt(0.5)
 
+    def qp(z, quat, qa, qb):
+        return fmt(0, 0, z, *quat, qa, qb, 0, qa, qb, 0)
+
+    def ct(qa, qb):
+        return fmt(0, 0, 0, 0, 0, 0) if mode == "torque" else fmt(qa, qb, 0, qa, qb, 0)
+
+    kf = ET.SubElement(root, "keyframe")
+    for name, z, quat, qa, qb in (
+        ("stand",       H_nom + clr, (1, 0, 0, 0),    q1, q2),
+        ("crouch",      H_lo + clr,  (1, 0, 0, 0),    c1, c2),
+        ("lying_front", 0.15,        (s2, 0, s2, 0),  c1, c2),
+        ("lying_back",  0.15,        (s2, 0, -s2, 0), c1, c2),
+        ("lying_side",  0.15,        (s2, s2, 0, 0),  c1, c2),
+    ):
+        ET.SubElement(kf, "key", name=name, qpos=qp(z, quat, qa, qb), ctrl=ct(qa, qb))
     ET.indent(root)
     return ET.tostring(root, encoding="unicode")
 
 
 def main():
-    xml = build_xml(load_params())
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUT_PATH.write_text(xml)
-    print("wrote", OUT_PATH)
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", choices=["position", "torque"], default="position")
+    args = ap.parse_args()
+    xml = build_xml(load_params(), mode=args.mode)
+    out = OUT_PATH if args.mode == "position" else OUT_PATH.with_name("biped_torque.xml")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(xml)
+    print("wrote", out)
 
 
 if __name__ == "__main__":
