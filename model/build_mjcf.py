@@ -36,6 +36,8 @@ def validate(p):
         lo, hi = p["joints"][joint]["range_rad"]
         if lo >= hi:
             raise ValueError(f"{joint}: range must be increasing")
+    if p["wheel"]["geom_type"] not in ("cylinder", "sphere"):
+        raise ValueError("wheel.geom_type must be 'cylinder' or 'sphere'")
 
 
 def build_xml(p, mode = "position"):
@@ -144,12 +146,19 @@ def build_xml(p, mode = "position"):
             wheel, "inertial", pos="0 0 0",
             mass=fmt(wh["mass_kg"]), diaginertia=fmt(*wh["inertia_kgm2"]),
         )
-        ET.SubElement(
-            wheel, "geom", name=f"wheel_{side}_geom", type="cylinder",
-            fromto=fmt(0, -wh["width_m"] / 2, 0, 0, wh["width_m"] / 2, 0),
-            size=fmt(wh["radius_m"]), friction=fmt(*ct["wheel_friction"]),
-            contype=WHEEL, conaffinity="0", rgba="0.1 0.1 0.1 1",
-        )
+        if wh["geom_type"] == "cylinder":
+            ET.SubElement(
+                wheel, "geom", name=f"wheel_{side}_geom", type="cylinder",
+                fromto=fmt(0, -wh["width_m"] / 2, 0, 0, wh["width_m"] / 2, 0),
+                size=fmt(wh["radius_m"]), friction=fmt(*ct["wheel_friction"]),
+                contype=WHEEL, conaffinity="0", rgba="0.1 0.1 0.1 1",
+            )
+        else:
+            ET.SubElement(
+                wheel, "geom", name=f"wheel_{side}_geom", type="sphere",
+                size=fmt(wh["radius_m"]), friction=fmt(*ct["wheel_friction"]),
+                contype=WHEEL, conaffinity="0", rgba="0.1 0.1 0.1 1",
+            )
 
     act = ET.SubElement(root, "actuator")
     for side in ("l", "r"):

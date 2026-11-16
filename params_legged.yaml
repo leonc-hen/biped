@@ -49,6 +49,7 @@ wheel:
   mass_kg: 0.12
   radius_m: 0.03
   width_m: 0.02
+  geom_type: cylinder      # cylinder | sphere; sphere is the MJX fallback (D note if used)
   inertia_kgm2: [0.000031, 0.000054, 0.000031]
 
 joints:
