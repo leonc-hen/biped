@@ -29,7 +29,7 @@ from src.env_s1 import make_env, OBS_SIZE  # noqa: E402
 
 def main():
     ok = True
-    reset, step, sizes = make_env()
+    reset, step, sizes, aux = make_env()
 
     # 1 observation size
     s = reset(jax.random.PRNGKey(0))

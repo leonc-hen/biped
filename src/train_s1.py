@@ -30,7 +30,7 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
     cfg = dict(CFG, total_steps=args.steps, resume=args.resume, seed=args.seed)
-    reset_fn, step_fn, sizes = make_env()
+    reset_fn, step_fn, sizes, aux = make_env()
     train(cfg, reset_fn, step_fn, sizes, ROOT / "runs" / args.name)
 
 

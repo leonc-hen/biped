@@ -1,6 +1,6 @@
 """S1 training environment: balance and drive at fixed height (docs/interface.md v0.1).
 
-Pure functional env: make_env() returns (reset, step, sizes). reset(rng) -> EnvState,
+Pure functional env: make_env() returns (reset, step, sizes, aux). reset(rng) -> EnvState,
 step(EnvState, action) -> EnvState. No auto reset and no randomization yet; both are
 wrappers added in later steps. Reward weights are placeholders to tune in training.
 """
@@ -124,5 +124,7 @@ def make_env():
         return EnvState(data, get_obs(data, a, state.cmd), a, state.cmd,
                         reward, done, steps)
 
+    aux = dict(p=p, model=model, qpos0=qpos0, stand_leg=stand_leg, h_nom=h_nom,
+               lm=lm, wheel_peak=wheel_peak, get_obs=get_obs)
     return reset, step, dict(obs=OBS_SIZE, act=ACT_SIZE, n_sub=n_sub,
-                             max_steps=max_steps)
+                             max_steps=max_steps), aux

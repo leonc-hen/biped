@@ -24,7 +24,7 @@ from src.train_s1 import CFG  # noqa: E402
 def main():
     cfg = dict(CFG, total_steps=4_000_000, num_envs=1024, log_every=2,
                ckpt_every=10_000, resume=False)
-    reset_fn, step_fn, sizes = make_env()
+    reset_fn, step_fn, sizes, aux = make_env()
     _, hist = train(cfg, reset_fn, step_fn, sizes, ROOT / "runs" / "step17_smoke")
 
     head, tail = hist[:3], hist[-3:]
