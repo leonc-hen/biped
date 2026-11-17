@@ -1,8 +1,9 @@
 """S1 training environment: balance and drive at fixed height (docs/interface.md v0.1).
 
 Pure functional env: make_env() returns (reset, step, sizes, aux). reset(rng) -> EnvState,
-step(EnvState, action) -> EnvState. No auto reset and no randomization yet; both are
-wrappers added in later steps. Reward weights are placeholders to tune in training.
+step(EnvState, action) -> EnvState. No auto reset. reset samples the command (20 percent
+pure standing) and an initial base velocity and pitch rate push; no dynamics randomization
+yet. Reward weights are v0.3, see the build log.
 """
 import math
 import sys
@@ -31,8 +32,8 @@ WHEEL_CTRL = jnp.array([2, 5])
 
 OBS_SIZE, ACT_SIZE = 27, 6
 EPISODE_S = 10.0
-W = dict(track_v=1.0, track_yaw=0.5, upright=0.5, height=0.3,
-         torque=1e-3, action_rate=1e-2, fall=5.0)   # placeholder weights
+W = dict(track_v=1.0, track_v_fine=1.0, track_yaw=0.5, upright=0.5, tilt=0.3,
+         height=0.3, torque=1e-3, action_rate=1e-2, angvel=0.02, fall=5.0)  # v0.3
 
 
 class EnvState(NamedTuple):
@@ -48,6 +49,14 @@ class EnvState(NamedTuple):
 def gravity_body(quat):
     w, x, y, z = quat[0], quat[1], quat[2], quat[3]
     return -jnp.array([2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)])
+
+
+def forward_velocity(data):
+    """Speed along the torso's heading, horizontal plane. Body 1 is the torso."""
+    fwd = data.xmat[1].reshape(3, 3)[:, 0]
+    fwd_h = fwd.at[2].set(0.0)
+    fwd_h = fwd_h / (jnp.linalg.norm(fwd_h) + 1e-6)
+    return jnp.dot(fwd_h, data.qvel[0:3])
 
 
 def make_env():
@@ -77,13 +86,13 @@ def make_env():
         return raw * scale
 
     def reset(rng):
-        r1, r2 = jax.random.split(rng)
-        cmd = jnp.array([
-            jax.random.uniform(r1, (), minval=-0.5, maxval=1.0),
-            jax.random.uniform(r2, (), minval=-1.0, maxval=1.0),
-            h_nom,
-        ])
-        data = mjx.make_data(model).replace(qpos=qpos0, qvel=jnp.zeros(model.nv))
+        r1, r2, r3, r4 = jax.random.split(rng, 4)
+        vx = jax.random.uniform(r1, (), minval=-0.5, maxval=1.0)
+        vx = jnp.where(jax.random.uniform(r4, ()) < 0.2, 0.0, vx)   # 20 percent pure standing
+        cmd = jnp.array([vx, jax.random.uniform(r2, (), minval=-1.0, maxval=1.0), h_nom])
+        dv = jax.random.uniform(r3, (2,), minval=-1.0, maxval=1.0) * jnp.array([0.5, 1.0])
+        qvel0 = jnp.zeros(model.nv).at[0].set(dv[0]).at[4].set(dv[1])  # base vx, pitch rate
+        data = mjx.make_data(model).replace(qpos=qpos0, qvel=qvel0)
         data = mjx.forward(model, data)
         a0 = jnp.zeros(ACT_SIZE)
         return EnvState(data, get_obs(data, a0, cmd), a0, cmd,
@@ -106,9 +115,14 @@ def make_env():
 
         g_b = gravity_body(data.qpos[3:7])
         upright = -g_b[2]
+        tilt_ang = jnp.arccos(jnp.clip(upright, -1.0, 1.0))
+        tilt_r = jnp.exp(-jnp.square(tilt_ang) / 0.006)     # half value near 3.7 deg, leaves room to lean when accelerating
+        cost_angvel = jnp.sum(jnp.square(data.qvel[3:6]))
         height = data.qpos[2]
-        track_v = jnp.exp(-jnp.square(data.qvel[0] - state.cmd[0]) / 0.25)
-        track_yaw = jnp.exp(-jnp.square(data.qvel[5] - state.cmd[1]) / 0.25)
+        err_v = forward_velocity(data) - state.cmd[0]
+        track_v = jnp.exp(-jnp.square(err_v) / 0.25)        # coarse: gradient from far away
+        track_v_fine = jnp.exp(-jnp.square(err_v) / 0.04)   # fine: precision near target
+        track_yaw = jnp.exp(-jnp.square(data.qvel[5] - state.cmd[1]) / 0.09)
         height_r = jnp.exp(-jnp.square(height - state.cmd[2]) / 0.01)
         cost_tau = jnp.mean(jnp.sum(jnp.square(ctrl_hist), axis=-1))
         cost_rate = jnp.sum(jnp.square(a - state.prev_action))
@@ -116,9 +130,11 @@ def make_env():
         steps = state.steps + 1
         fell = (upright < math.cos(1.0)) | (height < 0.08)
         done = (fell | (steps >= max_steps)).astype(jnp.float32)
-        reward = (W["track_v"] * track_v + W["track_yaw"] * track_yaw
-                  + W["upright"] * upright + W["height"] * height_r
+        reward = (W["track_v"] * track_v + W["track_v_fine"] * track_v_fine
+                  + W["track_yaw"] * track_yaw
+                  + W["upright"] * upright + W["tilt"] * tilt_r + W["height"] * height_r
                   - W["torque"] * cost_tau - W["action_rate"] * cost_rate
+                  - W["angvel"] * cost_angvel
                   - W["fall"] * fell.astype(jnp.float32))
 
         return EnvState(data, get_obs(data, a, state.cmd), a, state.cmd,

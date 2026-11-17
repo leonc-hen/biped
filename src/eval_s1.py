@@ -19,6 +19,7 @@ import json
 import math
 import pickle
 import sys
+from functools import partial
 
 import jax
 import jax.numpy as jnp
@@ -27,7 +28,8 @@ from mujoco import mjx
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from src.env_s1 import make_env, EnvState, gravity_body, ACT_SIZE, LEG_Q, LEG_V  # noqa: E402
+from src.env_s1 import (make_env, EnvState, gravity_body, forward_velocity,  # noqa: E402
+                        ACT_SIZE, LEG_Q, LEG_V)
 from src.leg_actuator_jax import pd_torque  # noqa: E402
 from src.ppo import ActorCritic  # noqa: E402
 
@@ -59,7 +61,7 @@ def main():
         return EnvState(data, aux["get_obs"](data, a0, c), a0, c,
                         jnp.zeros(()), jnp.zeros(()), jnp.zeros((), dtype=jnp.int32))
 
-    @jax.jit
+    @partial(jax.jit, static_argnums=1)
     def rollout(state, n):
         def body(st, _):
             mean, _, _ = net.apply(params, st.obs)
@@ -74,19 +76,43 @@ def main():
             tau_w = aux["wheel_peak"] * jnp.tanh(mean)[4:6]
             power = (jnp.sum(jnp.abs(tau_leg * d.qvel[LEG_V]))
                      + jnp.sum(jnp.abs(tau_w * d.qvel[jnp.array([8, 11])])))
-            return st, (tilt, st.data.qvel[0], st.done, jnp.max(jnp.abs(tau_leg)),
+            return st, (tilt, forward_velocity(st.data), st.done, jnp.max(jnp.abs(tau_leg)),
                         jnp.max(jnp.abs(tau_w)), power)
         _, out = jax.lax.scan(body, state, None, length=n)
-        return [np.array(x) for x in out]
+        return out
+
+    def rollout_np(state, n):
+        return [np.array(x) for x in rollout(state, n)]
+
+    def until_fall(arrs):
+        done = arrs[2]
+        fell = bool((done > 0.5).any())
+        n = int(np.argmax(done > 0.5)) + 1 if fell else len(done)
+        return [a[:n] for a in arrs], fell
 
     N5 = int(5.0 / DT)
     results = {}
 
+    # 0 standing equilibrium. The legged robot's resting torso tilt is not zero
+    # (forward CoM offset), so recovery is judged relative to it (D12).
+    out, st_fell = until_fall(rollout_np(init_state(), N5))
+    tilt_s = out[0][int(1.0 / DT):]
+    tilt_eq = float(tilt_s.mean()) if len(tilt_s) else math.nan   # nan if it fell within 1 s
+    results["standing_fell"] = st_fell
+    results["standing_tilt_mean_deg"] = round(math.degrees(tilt_eq), 3) if len(tilt_s) else None
+    results["standing_tilt_std_deg"] = (round(math.degrees(float(tilt_s.std())), 3)
+                                        if len(tilt_s) else None)
+
+    def settled(tail):
+        return (abs(tail.mean() - tilt_eq) < math.radians(2.0)
+                and tail.std() < math.radians(1.0))
+
     # 1 tilt recovery sweep
     max_tilt, t_rec_03 = 0.0, None
     for th in np.arange(0.1, 1.01, 0.1):
-        tilt, _, done, tau_l, tau_w, _ = rollout(init_state(theta=float(th)), N5)
-        okr = done.max() < 0.5 and tilt[-50:].mean() < math.radians(3)
+        out, fell = until_fall(rollout_np(init_state(theta=float(th)), N5))
+        tilt, _, _, tau_l, tau_w, _ = out
+        okr = (not fell) and settled(tilt[-50:])
         if okr:
             max_tilt = float(th)
             if abs(th - 0.3) < 1e-6:
@@ -112,8 +138,9 @@ def main():
         st = settle_1s(init_state())
         st = st._replace(data=st.data.replace(qvel=st.data.qvel.at[0].add(float(dv))),
                          done=jnp.zeros(()), steps=jnp.zeros((), dtype=jnp.int32))
-        tilt, vx, done, _, _, _ = rollout(st, N5)
-        if done.max() < 0.5 and tilt[-50:].mean() < math.radians(3) and abs(vx[-50:].mean()) < 0.1:
+        out, fell = until_fall(rollout_np(st, N5))
+        tilt, vx, _, _, _, _ = out
+        if (not fell) and settled(tilt[-50:]) and abs(vx[-50:].mean()) < 0.1:
             max_push = float(dv)
         else:
             break
@@ -121,35 +148,35 @@ def main():
 
     # 3 velocity tracking
     for v_ref in (0.3, 1.0):
-        tilt, vx, done, tau_l, tau_w, power = rollout(
-            init_state(cmd=(v_ref, 0.0, None)), int(8.0 / DT))
-        band = np.abs(vx - v_ref) < 0.1 * v_ref
-        idx = next((i for i in range(len(band)) if band[i:].all()), None)
+        out, fell = until_fall(rollout_np(init_state(cmd=(v_ref, 0.0, None)), int(8.0 / DT)))
+        tilt, vx, _, tau_l, tau_w, power = out
+        results[f"track_{v_ref}_fell"] = fell
+        results[f"track_{v_ref}_mean_v"] = round(float(vx[-200:].mean()), 3)
+        idx = None
+        if not fell:
+            band = np.abs(vx - v_ref) < 0.1 * v_ref
+            idx = next((i for i in range(len(band)) if band[i:].all()), None)
         results[f"track_{v_ref}_settle_s"] = None if idx is None else round(idx * DT, 2)
         results[f"track_{v_ref}_overshoot_pct"] = round(
             max(0.0, (vx.max() - v_ref) / v_ref * 100), 1)
-        if v_ref == 1.0:
+        if v_ref == 1.0 and not fell:
             steady = slice(int(4.0 / DT), None)
             dist = float(np.sum(vx[steady]) * DT)
-            results["energy_J_per_m_at_1m_s"] = round(
-                float(np.sum(power[steady]) * DT) / max(dist, 1e-6), 2)
+            results["energy_J_per_m_at_1m_s"] = (
+                round(float(np.sum(power[steady]) * DT) / dist, 2) if dist > 1.0 else None)
             results["tau_peak_drive1_leg_wheel_Nm"] = [float(tau_l.max()), float(tau_w.max())]
-
-    # 6 standing RMS tilt (no noise in the env yet, see header)
-    tilt, _, _, _, _, _ = rollout(init_state(), N5)
-    results["standing_rms_tilt_deg"] = round(float(np.degrees(
-        np.sqrt(np.mean(tilt[int(1.0 / DT):] ** 2)))), 3)
 
     out = ROOT / "results" / "eval_s1.json"
     with open(out, "w") as f:
-        json.dump({"run": args.run, "metrics": results}, f, indent=2)
+        json.dump({"run": args.run, "metrics": results}, f, indent=2, default=float)
 
-    print(json.dumps(results, indent=2))
+    print(json.dumps(results, indent=2, default=float))
     print("\nbaseline_lqr.json for comparison:")
     print(json.dumps(json.load(open(ROOT / "baseline_lqr.json")), indent=2))
 
     ok = (max_tilt >= 0.35 and max_push >= 0.4
-          and results.get("track_1.0_settle_s") is not None)
+          and results.get("track_1.0_settle_s") is not None
+          and not st_fell and tilt_eq < math.radians(6.0))
     print(f"\nwrote {out.relative_to(ROOT)}")
     print("R07 PARITY PASS" if ok else "R07 PARITY FAIL (20 deg tilt, 0.4 m/s push, tracks 1.0 m/s)")
     sys.exit(0 if ok else 1)
