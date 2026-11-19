@@ -1,0 +1,29 @@
+{
+  "run": "s1_v2",
+  "metrics": {
+    "env": "s1",
+    "standing_fell": false,
+    "standing_tilt_mean_deg": 3.928,
+    "standing_tilt_std_deg": 0.019,
+    "tau_peak_recover03_leg_wheel_Nm": [
+      2.758307933807373,
+      0.35961705446243286
+    ],
+    "max_recovered_tilt_rad": 0.6,
+    "recovery_time_from_0.3rad_s": 0.13,
+    "max_push_fwd_m_s": 1.5,
+    "track_0.3_fell": false,
+    "track_0.3_mean_v": 0.245,
+    "track_0.3_settle_s": null,
+    "track_0.3_overshoot_pct": 0.0,
+    "track_1.0_fell": false,
+    "track_1.0_mean_v": 0.955,
+    "track_1.0_settle_s": 0.54,
+    "track_1.0_overshoot_pct": 6.9,
+    "energy_J_per_m_at_1m_s": 1.09,
+    "tau_peak_drive1_leg_wheel_Nm": [
+      2.661057710647583,
+      0.3101078271865845
+    ]
+  }
+}
