@@ -1,0 +1,56 @@
+{
+  "env": "s2r",
+  "run": "s2r_b",
+  "standing_tilt_mean_deg": 1.434,
+  "standing_tilt_std_deg": 0.022,
+  "max_recovered_tilt_rad": 0.1,
+  "max_recovered_tilt_back_rad": 0.0,
+  "recovery_time_from_0.3rad_s": null,
+  "max_push_fwd_m_s": 0.0,
+  "max_push_back_m_s": 0.1,
+  "max_push_lat_m_s": 0.1,
+  "max_push_lat_neg_m_s": 0.0,
+  "standing_mean_v_m_s": 0.0525,
+  "first_failures": {
+    "tilt_fwd_0.2": "lean offset +0.25 deg, wobble 1.10 deg, final speed +0.040 m/s",
+    "tilt_back_0.1": "lean offset +0.21 deg, wobble 1.09 deg, final speed +0.039 m/s",
+    "push_fwd_0.1": "lean offset +0.21 deg, wobble 1.09 deg, final speed +0.040 m/s",
+    "push_back_0.2": "lean offset +0.22 deg, wobble 1.09 deg, final speed +0.039 m/s",
+    "push_lat_0.2": "lean offset +0.22 deg, wobble 1.09 deg, final speed +0.039 m/s",
+    "push_lat_neg_0.1": "lean offset +0.21 deg, wobble 1.09 deg, final speed +0.040 m/s"
+  },
+  "track_0.3_fell": false,
+  "track_0.3_mean_v": 0.352,
+  "track_0.3_settle_s": null,
+  "track_0.3_overshoot_pct": 29.6,
+  "track_1.0_fell": false,
+  "track_1.0_mean_v": 1.039,
+  "track_1.0_settle_s": 0.55,
+  "track_1.0_overshoot_pct": 8.6,
+  "energy_J_per_m_at_1m_s": 1.18,
+  "height_0.159_signed_mm": 3.3,
+  "height_0.159_err_mm": 3.3,
+  "height_0.190_signed_mm": -0.0,
+  "height_0.190_err_mm": 0.0,
+  "height_0.210_signed_mm": -0.7,
+  "height_0.210_err_mm": 0.7,
+  "push_rand_0.4_success": {
+    "rate": 0.524,
+    "ci95": [
+      0.493,
+      0.5548
+    ],
+    "n": 1000
+  },
+  "push_rand_0.4_by_sector": {
+    "fwd": 0.0,
+    "fwd_left": 0.244,
+    "left": 0.82,
+    "back_left": 1.0,
+    "back": 1.0,
+    "back_right": 0.743,
+    "right": 0.4,
+    "fwd_right": 0.0
+  },
+  "runtime_s": 39.9
+}

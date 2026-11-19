@@ -1,0 +1,56 @@
+{
+  "env": "s2r",
+  "run": "s2r_c",
+  "standing_tilt_mean_deg": 1.635,
+  "standing_tilt_std_deg": 0.037,
+  "max_recovered_tilt_rad": 0.4,
+  "max_recovered_tilt_back_rad": 0.5,
+  "recovery_time_from_0.3rad_s": 0.38,
+  "max_push_fwd_m_s": 1.3,
+  "max_push_back_m_s": 1.4,
+  "max_push_lat_m_s": 0.6,
+  "max_push_lat_neg_m_s": 0.6,
+  "standing_mean_v_m_s": -0.0078,
+  "first_failures": {
+    "tilt_fwd_0.5": "fell at 0.53 s",
+    "tilt_back_0.6": "fell at 0.58 s",
+    "push_fwd_1.4": "fell at 1.61 s",
+    "push_back_1.5": "fell at 1.70 s",
+    "push_lat_0.7": "fell at 1.71 s",
+    "push_lat_neg_0.7": "fell at 1.73 s"
+  },
+  "track_0.3_fell": false,
+  "track_0.3_mean_v": 0.289,
+  "track_0.3_settle_s": 0.75,
+  "track_0.3_overshoot_pct": 5.7,
+  "track_1.0_fell": false,
+  "track_1.0_mean_v": 0.96,
+  "track_1.0_settle_s": 0.63,
+  "track_1.0_overshoot_pct": 0.0,
+  "energy_J_per_m_at_1m_s": 2.32,
+  "height_0.159_signed_mm": 4.2,
+  "height_0.159_err_mm": 4.2,
+  "height_0.190_signed_mm": 0.1,
+  "height_0.190_err_mm": 0.1,
+  "height_0.210_signed_mm": -2.7,
+  "height_0.210_err_mm": 2.7,
+  "push_rand_0.4_success": {
+    "rate": 1.0,
+    "ci95": [
+      0.9962,
+      1.0
+    ],
+    "n": 1000
+  },
+  "push_rand_0.4_by_sector": {
+    "fwd": 1.0,
+    "fwd_left": 1.0,
+    "left": 1.0,
+    "back_left": 1.0,
+    "back": 1.0,
+    "back_right": 1.0,
+    "right": 1.0,
+    "fwd_right": 1.0
+  },
+  "runtime_s": 45.0
+}

@@ -31,8 +31,8 @@ from mujoco import mjx
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from src.env_s1 import (make_env, CONFIGS, EnvState, gravity_body, forward_velocity,  # noqa: E402
-                        ACT_SIZE, LEG_CTRL, WHEEL_CTRL, LEG_V, WHEEL_V)
+from src.env_s1 import (make_env, CONFIGS, gravity_body, forward_velocity,  # noqa: E402
+                        LEG_CTRL, WHEEL_CTRL, LEG_V, WHEEL_V)
 from src.ppo import ActorCritic  # noqa: E402
 
 DT = 0.01
@@ -83,6 +83,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
     ap.add_argument("--compare", action="store_true")
+    ap.add_argument("--dr_scale", type=float, default=None)
+    ap.add_argument("--a_only", action="store_true", help="Part A only, skip B and C")
+    ap.add_argument("--a_noise", action="store_true", help="Part A with full sensor noise")
+    ap.add_argument("--a_delay_ms", type=float, default=None, help="Part A with a fixed delay")
     args = ap.parse_args()
     t0 = time.time()
 
@@ -90,10 +94,17 @@ def main():
         saved = pickle.load(f)
     params = saved["params"]
     env_name = saved["cfg"].get("env", "s1")
-    train_cfg = CONFIGS[env_name]
-    det_cfg = dict(train_cfg, push_every_s=None, resample_s=None)
+    train_cfg = dict(CONFIGS[env_name])
+    train_cfg.update(saved["cfg"].get("env_overrides", {}))
+    det_cfg = dict(train_cfg, push_every_s=None, resample_s=None, dr=False)
+    if args.a_noise or args.a_delay_ms is not None:
+        det_cfg.update(dr=True, dr_scale=0.0, noise_scale=1.0 if args.a_noise else 0.0,
+                       delay_fixed_ms=args.a_delay_ms)
+    b_cfg = dict(train_cfg)
+    if args.dr_scale is not None:
+        b_cfg.update(dr=True, dr_scale=args.dr_scale)
     _, step_det, sizes, aux = make_env(det_cfg)
-    reset_tr, step_tr, _, aux_tr = make_env(train_cfg)
+    reset_tr, step_tr, _, _ = make_env(b_cfg)
     net = ActorCritic(sizes["act"])
     p, model = aux["p"], aux["model"]
     r_w = p["wheel"]["radius_m"]
@@ -110,9 +121,7 @@ def main():
         zero = jnp.zeros_like(theta)
         qpos = qpos.at[3:7].set(jnp.stack([jnp.cos(theta / 2), zero, jnp.sin(theta / 2), zero]))
         data = mjx.forward(model, mjx.make_data(model).replace(qpos=qpos, qvel=jnp.zeros(model.nv)))
-        a0, z = jnp.zeros(ACT_SIZE), jnp.zeros(())
-        return EnvState(data, aux["get_obs"](data, a0, cmd), a0, cmd, z, z,
-                        jnp.zeros((), dtype=jnp.int32), jax.random.PRNGKey(0))
+        return aux["init_from_data"](data, cmd)
 
     # ---- episode table: (kind, value, theta, cmd, push_k, push_dv, end_step)
     specs = []
@@ -201,6 +210,24 @@ def main():
     res["max_push_back_m_s"] = sweep_max("push_back")
     res["max_push_lat_m_s"] = sweep_max("push_lat")
     res["max_push_lat_neg_m_s"] = sweep_max("push_lat_neg")
+    res["standing_mean_v_m_s"] = round(float(v[0, 100:500].mean()), 4)
+
+    def why(i):
+        end = specs[i][6]
+        if fell_before(i, end):
+            return f"fell at {np.argmax(done[i, :end] > 0.5) * DT:.2f} s"
+        tail = tilt[i, end - 50:end]
+        seg = tilt[i, end - 200:end] - tilt[i, end - 200:end].mean()
+        freq = np.count_nonzero(np.diff(np.sign(seg)) != 0) / 2 / (200 * DT)
+        return (f"lean offset {math.degrees(tail.mean() - tilt_eq):+.2f} deg, "
+                f"wobble {math.degrees(tail.std()):.2f} deg at {freq:.1f} Hz, "
+                f"final speed {v[i, end - 50:end].mean():+.3f} m/s")
+
+    res["first_failures"] = {}
+    for kind in ("tilt_fwd", "tilt_back", "push_fwd", "push_back", "push_lat", "push_lat_neg"):
+        i = next((j for j, s in enumerate(specs) if s[0] == kind and not success(j)), None)
+        if i is not None:
+            res["first_failures"][f"{kind}_{specs[i][1]:.1f}"] = why(i)
 
     for v_ref in (0.3, 1.0):
         i = find("track", v_ref)
@@ -238,54 +265,125 @@ def main():
     res["push_rand_0.4_by_sector"] = {
         SECTORS[s]: round(float(ok_rand[sector == s].mean()), 3) for s in range(8)}
 
-    # ---- Part B: the training distribution
-    print("Part B: training distribution episodes", flush=True)
-    nb = N_EPISODES_B
-    states_b = jax.jit(jax.vmap(reset_tr))(jax.random.split(jax.random.PRNGKey(123), nb))
-    roll_b = make_rollout(step_tr, net, params, N_STAT)
-    ob = {k: np.array(x) for k, x in roll_b(
-        states_b, jnp.full(nb, -1), jnp.zeros((nb, 2))).items()}
-    d = ob["done"] > 0.5
-    first = np.where(d.any(1), d.argmax(1), N_STAT)
-    fell_b = d[:, :N_STAT - 1].any(1)                  # done before the timeout step
-    t_idx = np.arange(N_STAT)[None, :]
-    alive = t_idx < first[:, None]
-    period = round(train_cfg["resample_s"] / DT) if train_cfg["resample_s"] else N_STAT
-    settled_mask = alive & ((t_idx % period) >= 100)   # skip 1 s after every command change
-    cmd_used = np.concatenate([np.array(states_b.cmd)[:, None, :], ob["cmd"][:, :-1, :]], axis=1)
-    err_v = ob["v"] - cmd_used[..., 0]
-    err_h = ob["h"] - cmd_used[..., 2]
+    if not args.a_only:
+        # ---- Part B: the training distribution
+        print("Part B: training distribution episodes", flush=True)
+        nb = N_EPISODES_B
+        states_b = jax.jit(jax.vmap(reset_tr))(jax.random.split(jax.random.PRNGKey(123), nb))
+        roll_b = make_rollout(step_tr, net, params, N_STAT)
+        ob = {k: np.array(x) for k, x in roll_b(
+            states_b, jnp.full(nb, -1), jnp.zeros((nb, 2))).items()}
+        d = ob["done"] > 0.5
+        first = np.where(d.any(1), d.argmax(1), N_STAT)
+        fell_b = d[:, :N_STAT - 1].any(1)                  # done before the timeout step
+        t_idx = np.arange(N_STAT)[None, :]
+        alive = t_idx < first[:, None]
+        period = round(b_cfg["resample_s"] / DT) if b_cfg["resample_s"] else N_STAT
+        settled_mask = alive & ((t_idx % period) >= 100)   # skip 1 s after every command change
+        cmd_used = np.concatenate([np.array(states_b.cmd)[:, None, :], ob["cmd"][:, :-1, :]], axis=1)
+        err_v = ob["v"] - cmd_used[..., 0]
+        err_h = ob["h"] - cmd_used[..., 2]
 
-    def rms(x, m):
-        return round(float(np.sqrt(np.mean(np.square(x[m])))), 4)
+        def rms(x, m):
+            return round(float(np.sqrt(np.mean(np.square(x[m])))), 4)
 
-    res["train_dist_fall"] = wilson(int(fell_b.sum()), nb)
-    res["train_dist_v_rmse_m_s"] = {"all": rms(err_v, alive), "settled": rms(err_v, settled_mask)}
-    res["train_dist_h_rmse_mm"] = {"all": round(rms(err_h, alive) * 1000, 1),
-                                   "settled": round(rms(err_h, settled_mask) * 1000, 1)}
-    tl, tw = np.abs(ob["tau_leg"]), np.abs(ob["tau_w"])
-    vl, vw = np.abs(ob["v_leg"]), np.abs(ob["v_w"])
-    res["train_dist_leg_torque_Nm"] = {
-        n: {"peak": round(float(tl[..., j][alive].max()), 3),
-            "p99": round(float(np.percentile(tl[..., j][alive], 99)), 3),
-            "rms": round(float(np.sqrt(np.mean(np.square(tl[..., j][alive])))), 3)}
-        for j, n in enumerate(LEG_NAMES)}
-    res["train_dist_wheel_torque_Nm"] = {
-        "peak": round(float(tw[alive].max()), 3),
-        "p99": round(float(np.percentile(tw[alive], 99)), 3),
-        "rms": round(float(np.sqrt(np.mean(np.square(tw[alive])))), 3)}
-    res["train_dist_leg_speed"] = {
-        "peak_rad_s": round(float(vl[alive].max()), 2),
-        "frac_above_90pct_limit": round(float(np.mean(vl[alive] > 0.9 * max_leg_speed)), 5)}
-    res["train_dist_wheel_speed_peak_rad_s"] = round(float(vw[alive].max()), 1)
-    res["train_dist_mean_power_W"] = round(float(power_of(ob)[alive].mean()), 2)
+        res["train_dist_fall"] = wilson(int(fell_b.sum()), nb)
+        res["train_dist_v_rmse_m_s"] = {"all": rms(err_v, alive), "settled": rms(err_v, settled_mask)}
+        res["train_dist_h_rmse_mm"] = {"all": round(rms(err_h, alive) * 1000, 1),
+                                       "settled": round(rms(err_h, settled_mask) * 1000, 1)}
+        tl, tw = np.abs(ob["tau_leg"]), np.abs(ob["tau_w"])
+        vl, vw = np.abs(ob["v_leg"]), np.abs(ob["v_w"])
+        res["train_dist_leg_torque_Nm"] = {
+            n: {"peak": round(float(tl[..., j][alive].max()), 3),
+                "p99": round(float(np.percentile(tl[..., j][alive], 99)), 3),
+                "rms": round(float(np.sqrt(np.mean(np.square(tl[..., j][alive])))), 3)}
+            for j, n in enumerate(LEG_NAMES)}
+        res["train_dist_wheel_torque_Nm"] = {
+            "peak": round(float(tw[alive].max()), 3),
+            "p99": round(float(np.percentile(tw[alive], 99)), 3),
+            "rms": round(float(np.sqrt(np.mean(np.square(tw[alive])))), 3)}
+        res["train_dist_leg_speed"] = {
+            "peak_rad_s": round(float(vl[alive].max()), 2),
+            "frac_above_90pct_limit": round(float(np.mean(vl[alive] > 0.9 * max_leg_speed)), 5)}
+        res["train_dist_wheel_speed_peak_rad_s"] = round(float(vw[alive].max()), 1)
+        res["train_dist_mean_power_W"] = round(float(power_of(ob)[alive].mean()), 2)
+
+        # ---- Part C: R07 pushes under randomization
+        if b_cfg["dr"]:
+            print(f"Part C: R07 pushes under randomization, scale {b_cfg['dr_scale']}", flush=True)
+            c_cfg = dict(b_cfg, push_every_s=None, resample_s=None,
+                         cmd_fixed=(0.0, 0.0, h_nom), reset_perturb=False)
+            reset_c, step_c, _, _ = make_env(c_cfg)
+            nc = 1000
+            rc = np.random.default_rng(1)
+            ang_c = rc.uniform(0, 2 * math.pi, nc)
+            k_c = rc.integers(100, 301, nc)
+            dv_c = np.stack([0.4 * np.cos(ang_c), 0.4 * np.sin(ang_c)], 1)
+            states_c = jax.jit(jax.vmap(reset_c))(jax.random.split(jax.random.PRNGKey(7), nc))
+            roll_c = make_rollout(step_c, net, params, N_DET)
+            oc = {k: np.array(x) for k, x in roll_c(
+                states_c, jnp.array(k_c), jnp.array(dv_c)).items()}
+            okc = np.zeros(nc, dtype=bool)
+            for i in range(nc):
+                if (oc["done"][i] > 0.5).any():
+                    continue
+                k = int(k_c[i])
+                pre = oc["tilt"][i, k - 50:k].mean()      # each robot's own equilibrium
+                tail = oc["tilt"][i, N_DET - 50:]
+                okc[i] = (abs(tail.mean() - pre) < DEG2 and tail.std() < DEG1
+                          and abs(oc["v"][i, N_DET - 50:].mean()) < 0.1)
+            res["dr_push_0.4_success"] = wilson(int(okc.sum()), nc)
+            sec_c = (((ang_c + math.pi / 8) % (2 * math.pi)) // (math.pi / 4)).astype(int)
+            res["dr_push_0.4_by_sector"] = {
+                SECTORS[s]: round(float(okc[sec_c == s].mean()), 3) for s in range(8)}
+
+            print("Part D: training distribution with pushes limited to R07", flush=True)
+            d_cfg = dict(b_cfg, push_max_norm=0.4)
+            reset_d, step_d, _, _ = make_env(d_cfg)
+            states_d = jax.jit(jax.vmap(reset_d))(jax.random.split(jax.random.PRNGKey(321), nb))
+            roll_d = make_rollout(step_d, net, params, N_STAT)
+            od = np.array(roll_d(states_d, jnp.full(nb, -1), jnp.zeros((nb, 2)))["done"]) > 0.5
+            res["within_spec_fall"] = wilson(int(od[:, :N_STAT - 1].any(1).sum()), nb)
 
     res["runtime_s"] = round(time.time() - t0, 1)
-    out_path = ROOT / "results" / f"evalb_{env_name}_{args.run}.json"
+    tag = "" if args.dr_scale is None else f"_dr{args.dr_scale}"
+    tag += "_Anoise" if args.a_noise else ""
+    tag += f"_Adelay{args.a_delay_ms:g}" if args.a_delay_ms is not None else ""
+    tag += "_Aonly" if args.a_only else ""
+    out_path = ROOT / "results" / f"evalb_{env_name}_{args.run}{tag}.json"
     with open(out_path, "w") as f:
         json.dump(res, f, indent=2, default=float)
     print(json.dumps(res, indent=2, default=float))
     print(f"\nwrote {out_path.relative_to(ROOT)}")
+
+    nominal = {
+        "tilt 0.35 rad forward and back (R07)":
+            min(res["max_recovered_tilt_rad"], res["max_recovered_tilt_back_rad"]) >= 0.35,
+        "push 0.4 m/s in all four directions (R07)":
+            min(res[k] for k in ("max_push_fwd_m_s", "max_push_back_m_s",
+                                 "max_push_lat_m_s", "max_push_lat_neg_m_s")) >= 0.4,
+        "random direction 0.4 m/s push, CI lower bound 0.90":
+            res["push_rand_0.4_success"]["ci95"][0] >= 0.90,
+        "tracks 1.0 m/s": res.get("track_1.0_settle_s") is not None,
+        "torso lean under 3 deg": tilt_eq < math.radians(3.0),
+    }
+    if env_name != "s1":
+        nominal["height within 10 mm at all three"] = all(
+            e is not None and e <= 10.0 for e in height_errs)
+    groups = [("nominal model", nominal)]
+    if b_cfg["dr"] and not args.a_only:
+        groups.append((f"randomized, scale {b_cfg['dr_scale']}", {
+            "R07 push success, CI lower bound 0.90": res["dr_push_0.4_success"]["ci95"][0] >= 0.90,
+            "within spec fall rate at most 3 percent (R07 pushes)":
+                res["within_spec_fall"]["rate"] <= 0.03,
+        }))
+    gate_ok = True
+    for title, checks in groups:
+        print(f"\n{title}")
+        for name, passed in checks.items():
+            gate_ok &= passed
+            print(f"  {'PASS' if passed else 'FAIL'}  {name}")
+    print(f"\nGATE {'PASS' if gate_ok else 'FAIL'}")
 
     if args.compare:
         ref_path = ROOT / "results" / f"eval_{env_name}_{args.run}.json"
@@ -307,6 +405,7 @@ def main():
             print(f"  {'OK  ' if same else 'DIFF'}  {k:32s} batch {a}   reference {b}")
         print("PARITY OK" if all_ok else "PARITY FAIL")
         sys.exit(0 if all_ok else 1)
+    sys.exit(0 if gate_ok else 1)
 
 
 if __name__ == "__main__":

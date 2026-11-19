@@ -11,18 +11,18 @@
   "max_push_lat_m_s": 0.7,
   "max_push_lat_neg_m_s": 0.7,
   "track_0.3_fell": false,
-  "track_0.3_mean_v": 0.313,
+  "track_0.3_mean_v": 0.314,
   "track_0.3_settle_s": 0.26,
   "track_0.3_overshoot_pct": 7.0,
   "track_1.0_fell": false,
   "track_1.0_mean_v": 1.019,
   "track_1.0_settle_s": 0.35,
   "track_1.0_overshoot_pct": 2.9,
-  "energy_J_per_m_at_1m_s": 1.63,
+  "energy_J_per_m_at_1m_s": 1.62,
   "height_0.159_signed_mm": 4.7,
   "height_0.159_err_mm": 4.7,
-  "height_0.190_signed_mm": 0.7,
-  "height_0.190_err_mm": 0.7,
+  "height_0.190_signed_mm": 0.6,
+  "height_0.190_err_mm": 0.6,
   "height_0.210_signed_mm": -0.9,
   "height_0.210_err_mm": 0.9,
   "push_rand_0.4_success": {
@@ -52,8 +52,8 @@
     "n": 1000
   },
   "train_dist_v_rmse_m_s": {
-    "all": 0.1826,
-    "settled": 0.0777
+    "all": 0.1831,
+    "settled": 0.0798
   },
   "train_dist_h_rmse_mm": {
     "all": 4.9,
@@ -61,36 +61,36 @@
   },
   "train_dist_leg_torque_Nm": {
     "hip_l": {
-      "peak": 2.889,
+      "peak": 2.942,
       "p99": 1.588,
       "rms": 0.88
     },
     "knee_l": {
       "peak": 3.0,
-      "p99": 1.019,
+      "p99": 1.021,
       "rms": 0.563
     },
     "hip_r": {
       "peak": 3.0,
-      "p99": 1.595,
+      "p99": 1.594,
       "rms": 0.883
     },
     "knee_r": {
       "peak": 3.0,
-      "p99": 1.251,
+      "p99": 1.25,
       "rms": 0.753
     }
   },
   "train_dist_wheel_torque_Nm": {
-    "peak": 0.384,
-    "p99": 0.225,
+    "peak": 0.383,
+    "p99": 0.226,
     "rms": 0.12
   },
   "train_dist_leg_speed": {
-    "peak_rad_s": 17.59,
+    "peak_rad_s": 18.09,
     "frac_above_90pct_limit": 0.0
   },
-  "train_dist_wheel_speed_peak_rad_s": 448.6,
+  "train_dist_wheel_speed_peak_rad_s": 461.3,
   "train_dist_mean_power_W": 3.66,
-  "runtime_s": 88.4
+  "runtime_s": 107.9
 }

@@ -1,0 +1,114 @@
+{
+  "env": "s2r",
+  "run": "s2r_b",
+  "standing_tilt_mean_deg": 1.434,
+  "standing_tilt_std_deg": 0.021,
+  "max_recovered_tilt_rad": 0.1,
+  "max_recovered_tilt_back_rad": 0.0,
+  "recovery_time_from_0.3rad_s": null,
+  "max_push_fwd_m_s": 0.0,
+  "max_push_back_m_s": 0.1,
+  "max_push_lat_m_s": 0.1,
+  "max_push_lat_neg_m_s": 0.0,
+  "track_0.3_fell": false,
+  "track_0.3_mean_v": 0.352,
+  "track_0.3_settle_s": null,
+  "track_0.3_overshoot_pct": 29.6,
+  "track_1.0_fell": false,
+  "track_1.0_mean_v": 1.039,
+  "track_1.0_settle_s": 0.55,
+  "track_1.0_overshoot_pct": 8.6,
+  "energy_J_per_m_at_1m_s": 1.18,
+  "height_0.159_signed_mm": 3.3,
+  "height_0.159_err_mm": 3.3,
+  "height_0.190_signed_mm": -0.0,
+  "height_0.190_err_mm": 0.0,
+  "height_0.210_signed_mm": -0.7,
+  "height_0.210_err_mm": 0.7,
+  "push_rand_0.4_success": {
+    "rate": 0.525,
+    "ci95": [
+      0.494,
+      0.5558
+    ],
+    "n": 1000
+  },
+  "push_rand_0.4_by_sector": {
+    "fwd": 0.0,
+    "fwd_left": 0.244,
+    "left": 0.82,
+    "back_left": 1.0,
+    "back": 1.0,
+    "back_right": 0.743,
+    "right": 0.408,
+    "fwd_right": 0.0
+  },
+  "train_dist_fall": {
+    "rate": 0.101,
+    "ci95": [
+      0.0838,
+      0.1212
+    ],
+    "n": 1000
+  },
+  "train_dist_v_rmse_m_s": {
+    "all": 0.2187,
+    "settled": 0.1253
+  },
+  "train_dist_h_rmse_mm": {
+    "all": 9.4,
+    "settled": 9.2
+  },
+  "train_dist_leg_torque_Nm": {
+    "hip_l": {
+      "peak": 3.041,
+      "p99": 1.415,
+      "rms": 0.607
+    },
+    "knee_l": {
+      "peak": 3.15,
+      "p99": 1.075,
+      "rms": 0.442
+    },
+    "hip_r": {
+      "peak": 3.299,
+      "p99": 1.462,
+      "rms": 0.639
+    },
+    "knee_r": {
+      "peak": 3.249,
+      "p99": 1.358,
+      "rms": 0.712
+    }
+  },
+  "train_dist_wheel_torque_Nm": {
+    "peak": 0.349,
+    "p99": 0.181,
+    "rms": 0.084
+  },
+  "train_dist_leg_speed": {
+    "peak_rad_s": 17.64,
+    "frac_above_90pct_limit": 0.0
+  },
+  "train_dist_wheel_speed_peak_rad_s": 93.0,
+  "train_dist_mean_power_W": 3.71,
+  "dr_push_0.4_success": {
+    "rate": 0.928,
+    "ci95": [
+      0.9103,
+      0.9424
+    ],
+    "n": 1000
+  },
+  "dr_push_0.4_by_sector": {
+    "fwd": 0.881,
+    "fwd_left": 0.907,
+    "left": 0.943,
+    "back_left": 0.956,
+    "back": 0.95,
+    "back_right": 0.907,
+    "right": 0.921,
+    "fwd_right": 0.953
+  },
+  "runtime_s": 153.4
+}
