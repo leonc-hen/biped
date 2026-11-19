@@ -1,0 +1,21 @@
+candidate,knee_at_hip,total_kg,peak_Nm,speed_rad_s,mass_g,rise_cm,wheel_clear_cm,torso_left_kg,price_usd
+CubeMars AK40-10,False,2.0,4.1,42.1,195,11.13,4.9,0.253,136-163
+CubeMars AK40-10,False,2.25,4.1,42.1,195,12.91,4.93,0.503,136-163
+CubeMars AKE40-6 + driver,False,2.0,5.5,32.0,170,11.93,5.55,0.353,not listed
+CubeMars AKE40-6 + driver,False,2.25,5.5,32.0,170,13.93,5.69,0.603,not listed
+SteadyWin GIM4305-10,False,2.0,3.47,35.5,150,9.86,3.53,0.433,70-132
+SteadyWin GIM4305-10,False,2.25,3.47,35.5,150,11.3,3.43,0.683,70-132
+SteadyWin GIM4310-10 V1.1,False,2.0,5.6,22.1,227,8.28,2.36,0.125,82 + driver
+SteadyWin GIM4310-10 V1.1,False,2.25,5.6,22.1,227,9.83,2.48,0.375,82 + driver
+DJI M2006 + C610,False,2.0,1.8,48.4,107,7.67,1.21,0.605,41-95 + ESC
+DJI M2006 + C610,False,2.25,1.8,48.4,107,8.66,1.02,0.855,41-95 + ESC
+CubeMars AK40-10,True,2.0,4.1,42.1,195,14.89,7.63,0.253,136-163
+CubeMars AK40-10,True,2.25,4.1,42.1,195,16.79,7.45,0.503,136-163
+CubeMars AKE40-6 + driver,True,2.0,5.5,32.0,170,16.84,9.45,0.353,not listed
+CubeMars AKE40-6 + driver,True,2.25,5.5,32.0,170,19.17,9.42,0.603,not listed
+SteadyWin GIM4305-10,True,2.0,3.47,35.5,150,12.76,5.63,0.433,70-132
+SteadyWin GIM4305-10,True,2.25,3.47,35.5,150,14.45,5.51,0.683,70-132
+SteadyWin GIM4310-10 V1.1,True,2.0,5.6,22.1,227,14.38,7.15,0.125,82 + driver
+SteadyWin GIM4310-10 V1.1,True,2.25,5.6,22.1,227,16.37,7.1,0.375,82 + driver
+DJI M2006 + C610,True,2.0,1.8,48.4,107,8.88,1.96,0.605,41-95 + ESC
+DJI M2006 + C610,True,2.25,1.8,48.4,107,9.77,1.55,0.855,41-95 + ESC
