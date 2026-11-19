@@ -49,6 +49,12 @@ def wheels_on_floor(model, data):
     return len(n)
 
 
+def spawn_penetration_mm(model, data):
+    if data.ncon == 0:
+        return 0.0
+    return 1000.0 * min(data.contact[i].dist for i in range(data.ncon))
+
+
 RAMP_S, HOLD_S = 0.6, 0.6
 HIP_Q, KNEE_Q = [7, 10], [8, 11]
 
@@ -59,6 +65,7 @@ def sweep(model, data, key_name, metric_col, writer):
     jr = load_params()["joints"]
     mujoco.mj_resetDataKeyframe(model, data, model.key(key_name).id)
     mujoco.mj_forward(model, data)
+    pen = spawn_penetration_mm(model, data)
     settle(model, data, 1.0)
     q0, v0 = data.qpos.copy(), data.qvel.copy()
     base_angle = axis_vs_up_deg(model, data, metric_col)
@@ -84,7 +91,7 @@ def sweep(model, data, key_name, metric_col, writer):
                              round(hip, 3), round(knee, 3), w, round(change, 1)])
             if change > best[0]:
                 best = (change, hip, knee, w)
-    return base_angle, best
+    return base_angle, best, pen
 
 
 def sweep_side(model, data, writer):
@@ -94,9 +101,11 @@ def sweep_side(model, data, writer):
     jr = load_params()["joints"]
     mujoco.mj_resetDataKeyframe(model, data, model.key("lying_side").id)
     mujoco.mj_forward(model, data)
+    pen = spawn_penetration_mm(model, data)
     settle(model, data, 1.0)
     q0, v0 = data.qpos.copy(), data.qvel.copy()
     base_angle = axis_vs_up_deg(model, data, 1)
+    rest_z = axis_vs_up_deg(model, data, 2)
 
     grid_h = np.linspace(*jr["hip"]["range_rad"], 4)
     grid_k = np.linspace(*jr["knee"]["range_rad"], 4)
@@ -124,7 +133,7 @@ def sweep_side(model, data, writer):
                                      wheels_on_floor(model, data), round(change, 1)])
                     if change < worst[0]:
                         worst = (change, (hl, kl, hr, kr))
-    return base_angle, worst
+    return base_angle, worst, pen, rest_z
 
 
 def main():
@@ -142,22 +151,26 @@ def main():
 
         # 1 front and back: body z axis vs up; flat is near 90, pitching up reduces it
         for key in ("lying_front", "lying_back"):
-            base, (gain, hip, knee, wh) = sweep(model, data, key, 2, w)
-            good = gain >= 15.0 and wh == 2
+            base, (gain, hip, knee, wh), pen = sweep(model, data, key, 2, w)
+            valid = pen > -2.0 and 45.0 <= base <= 135.0
+            good = valid and gain >= 15.0 and wh == 2
             ok &= good
-            print(f"{key:12s} rest tilt {base:5.1f} deg   best pitch up {gain:+5.1f} deg "
-                  f"at hip {hip:+.2f} knee {knee:+.2f} rad, wheels {wh}/2   "
-                  f"{'PASS' if good else 'FAIL'}")
+            print(f"{key:12s} spawn pen {pen:+5.1f} mm   rest tilt {base:5.1f} deg   "
+                  f"best pitch up {gain:+5.1f} deg at hip {hip:+.2f} knee {knee:+.2f} rad, "
+                  f"wheels {wh}/2   {'PASS' if good else ('INVALID START' if not valid else 'FAIL')}")
 
-        # 2 side: body y axis vs up; on the side it is near 0, rolling off raises it
-        # 2 side: minimum change (most negative) is the largest roll off the rail
-        base, (gain, pose) = sweep_side(model, data, w)
-        good = gain <= -30.0 or base >= 30.0
+        # 2 side: body y axis vs up, near 0 on the side; the minimum change (most
+        # negative) is the largest roll off the rail
+        base, (gain, pose), pen, rest_z = sweep_side(model, data, w)
+        valid = pen > -2.0
+        rolled_ok = base >= 30.0 and 45.0 <= rest_z <= 135.0   # landed on front or back, not upside down
+        good = valid and (gain <= -30.0 or rolled_ok)
         ok &= good
-        note = "rolled off the rail during the initial settle" if base >= 30.0 else ""
-        print(f"{'lying_side':12s} rest roll {base:5.1f} deg   best roll {-gain:+5.1f} deg "
-              f"at hl {pose[0]:+.2f} kl {pose[1]:+.2f} hr {pose[2]:+.2f} kr {pose[3]:+.2f}   "
-              f"{note}   {'PASS' if good else 'FAIL'}")
+        note = "rolled onto front or back during settle" if rolled_ok else ""
+        print(f"{'lying_side':12s} spawn pen {pen:+5.1f} mm   rest roll {base:5.1f} deg   "
+              f"best roll {-gain:+5.1f} deg at hl {pose[0]:+.2f} kl {pose[1]:+.2f} "
+              f"hr {pose[2]:+.2f} kr {pose[3]:+.2f}   {note}   "
+              f"{'PASS' if good else ('INVALID START' if not valid else 'FAIL')}")
 
     print(f"wrote {out.relative_to(ROOT)}")
     print("ALL PASS" if ok else "SOME CHECKS FAILED")

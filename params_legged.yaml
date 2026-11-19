@@ -12,8 +12,9 @@ sim:
   gravity_mps2: 9.81
   spawn_clearance_m: 0.002
 
-pose:                          # NEW
-  nominal_hip_height_m: 0.19   # mid working height, axle under the hip
+pose:
+  nominal_hip_height_m: 0.19          # mid working height, axle under the hip
+  height_cmd_range_m: [0.159, 0.21]   # commanded range, independent of joint limits
 
 body:
   mass_kg: 0.90
@@ -53,7 +54,7 @@ wheel:
   inertia_kgm2: [0.000031, 0.000054, 0.000031]
 
 joints:
-  hip: {range_rad: [-1.0, 1.5]}
+  hip: {range_rad: [-1.3, 1.5]}       # was -1.0; sim derived requirement, see D14
   knee: {range_rad: [-0.1, 2.4]}
   damping_Nms_per_rad: 0.01
   wheel_damping_Nms_per_rad: 0.0005

@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import math 
 
-from tools.params import load_params, leg_ik, height_range
+from tools.params import load_params, leg_ik
 
 OUT_PATH = Path(__file__).resolve().parent / "generated" / "biped.xml"
 
@@ -190,7 +190,7 @@ def build_xml(p, mode = "position"):
     # scripts settle them under gravity before measuring anything.
     H_nom = p["pose"]["nominal_hip_height_m"]
     q1, q2 = leg_ik(p, H_nom)
-    H_lo = height_range(p)[0] + 0.01
+    H_lo = p["pose"]["height_cmd_range_m"][0]
     c1, c2 = leg_ik(p, H_lo)
     clr = sim["spawn_clearance_m"]
     s2 = math.sqrt(0.5)
