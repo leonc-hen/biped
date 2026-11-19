@@ -1,0 +1,96 @@
+{
+  "env": "s2",
+  "run": "s2_v3",
+  "standing_tilt_mean_deg": 0.159,
+  "standing_tilt_std_deg": 0.006,
+  "max_recovered_tilt_rad": 0.8,
+  "max_recovered_tilt_back_rad": 0.8,
+  "recovery_time_from_0.3rad_s": 0.1,
+  "max_push_fwd_m_s": 2.0,
+  "max_push_back_m_s": 1.4,
+  "max_push_lat_m_s": 0.7,
+  "max_push_lat_neg_m_s": 0.7,
+  "track_0.3_fell": false,
+  "track_0.3_mean_v": 0.314,
+  "track_0.3_settle_s": 0.26,
+  "track_0.3_overshoot_pct": 7.0,
+  "track_1.0_fell": false,
+  "track_1.0_mean_v": 1.019,
+  "track_1.0_settle_s": 0.35,
+  "track_1.0_overshoot_pct": 2.9,
+  "energy_J_per_m_at_1m_s": 1.63,
+  "height_0.159_signed_mm": 4.7,
+  "height_0.159_err_mm": 4.7,
+  "height_0.190_signed_mm": 0.6,
+  "height_0.190_err_mm": 0.6,
+  "height_0.210_signed_mm": -0.9,
+  "height_0.210_err_mm": 0.9,
+  "push_rand_0.4_success": {
+    "rate": 1.0,
+    "ci95": [
+      0.9962,
+      1.0
+    ],
+    "n": 1000
+  },
+  "push_rand_0.4_by_sector": {
+    "fwd": 1.0,
+    "fwd_left": 1.0,
+    "left": 1.0,
+    "back_left": 1.0,
+    "back": 1.0,
+    "back_right": 1.0,
+    "right": 1.0,
+    "fwd_right": 1.0
+  },
+  "train_dist_fall": {
+    "rate": 0.006,
+    "ci95": [
+      0.0028,
+      0.013
+    ],
+    "n": 1000
+  },
+  "train_dist_v_rmse_m_s": {
+    "all": 0.1838,
+    "settled": 0.0821
+  },
+  "train_dist_h_rmse_mm": {
+    "all": 4.9,
+    "settled": 3.3
+  },
+  "train_dist_leg_torque_Nm": {
+    "hip_l": {
+      "peak": 3.0,
+      "p99": 1.588,
+      "rms": 0.88
+    },
+    "knee_l": {
+      "peak": 3.0,
+      "p99": 1.024,
+      "rms": 0.563
+    },
+    "hip_r": {
+      "peak": 3.0,
+      "p99": 1.595,
+      "rms": 0.883
+    },
+    "knee_r": {
+      "peak": 3.0,
+      "p99": 1.252,
+      "rms": 0.753
+    }
+  },
+  "train_dist_wheel_torque_Nm": {
+    "peak": 0.382,
+    "p99": 0.226,
+    "rms": 0.12
+  },
+  "train_dist_leg_speed": {
+    "peak_rad_s": 17.47,
+    "frac_above_90pct_limit": 0.0
+  },
+  "train_dist_wheel_speed_peak_rad_s": 541.2,
+  "train_dist_mean_power_W": 3.67,
+  "runtime_s": 112.9
+}
