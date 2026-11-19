@@ -12,20 +12,24 @@ os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.60")
 os.environ.setdefault("JAX_COMPILATION_CACHE_DIR", str(Path.home() / ".cache/jax"))
 os.environ.setdefault("JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS", "1")
 
+import argparse
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from src.env_s1 import make_env  # noqa: E402
+from src.env_s1 import make_env, CONFIGS  # noqa: E402
 from src.ppo import train  # noqa: E402
 from src.train_s1 import CFG  # noqa: E402
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--env", default="s1")
+    args = ap.parse_args()
     cfg = dict(CFG, total_steps=4_000_000, num_envs=1024, log_every=2,
-               ckpt_every=10_000, resume=False)
-    reset_fn, step_fn, sizes, aux = make_env()
-    _, hist = train(cfg, reset_fn, step_fn, sizes, ROOT / "runs" / "step17_smoke")
+               ckpt_every=10_000, resume=False, env=args.env)
+    reset_fn, step_fn, sizes, aux = make_env(CONFIGS[args.env])
+    _, hist = train(cfg, reset_fn, step_fn, sizes, ROOT / "runs" / f"step17_smoke_{args.env}")
 
     head, tail = hist[:3], hist[-3:]
     r0 = sum(h[1] for h in head) / 3

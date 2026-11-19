@@ -51,6 +51,10 @@ def train(cfg, reset_fn, step_fn, sizes, run_dir):
     net = ActorCritic(sizes["act"])
     rng, k = jax.random.split(rng)
     params = net.init(k, jnp.zeros(sizes["obs"]))
+    if cfg.get("init_from"):
+        with open(cfg["init_from"], "rb") as f:
+            params = pickle.load(f)["params"]
+        print(f"initialized from {cfg['init_from']}")
     tx = optax.chain(optax.clip_by_global_norm(0.5), optax.adam(cfg["lr"]))
     opt_state = tx.init(params)
     B, T = cfg["num_envs"], cfg["unroll"]

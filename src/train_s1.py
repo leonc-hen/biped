@@ -14,7 +14,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from src.env_s1 import make_env  # noqa: E402
+from src.env_s1 import make_env, CONFIGS  # noqa: E402
 from src.ppo import train  # noqa: E402
 
 CFG = dict(num_envs=2048, unroll=32, lr=3e-4, gamma=0.99, lam=0.95, clip=0.2,
@@ -28,9 +28,12 @@ def main():
     ap.add_argument("--steps", type=int, default=CFG["total_steps"])
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--env", choices=sorted(CONFIGS), default="s1")
+    ap.add_argument("--init_from")
     args = ap.parse_args()
-    cfg = dict(CFG, total_steps=args.steps, resume=args.resume, seed=args.seed)
-    reset_fn, step_fn, sizes, aux = make_env()
+    cfg = dict(CFG, total_steps=args.steps, resume=args.resume, seed=args.seed, env=args.env,
+               init_from=str(ROOT / "runs" / args.init_from / "ckpt.pkl") if args.init_from else None)
+    reset_fn, step_fn, sizes, aux = make_env(CONFIGS[args.env])
     train(cfg, reset_fn, step_fn, sizes, ROOT / "runs" / args.name)
 
 
