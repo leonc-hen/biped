@@ -109,6 +109,17 @@ Known risk carried from Phase 0: JAX on the RTX 5060 (Blackwell, sm_120)
 is unverified; JAX must report a gpu backend before any training run
 counts.
 
+### D13 Interface v0.2: residual leg targets and leg action filter
+Status: Decided
+Decision: docs/interface.md v0.2. Leg targets are residuals around the
+symmetric IK pose for the commanded hip height, target = IK(h) + 0.5 * y,
+where y is the leg action passed through a first order filter with alpha 0.5
+at the policy rate. The "previous action" observation is the applied,
+filtered action.
+Reason: the full height command range fits within the action scale, and the
+filter stops the bang-bang leg torque seen in s1_v2.
+Firmware impact: one acos and one filter per leg joint per policy tick.
+
 ## Deferred to Phase 2 data (decide at Gate A)
 
 Leg topology (knee motor at the knee, or both motors at the hip with a linkage to keep the leg light); exact actuator models and gear ratios; leg lengths; wheel size; battery capacity.

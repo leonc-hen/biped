@@ -1,4 +1,4 @@
-# Policy interface, v0.1
+# Policy interface, v0.2
 
 Single definition for training, export and firmware. Any change bumps the
 version and is a decisions.md entry. Order, units and scaling are normative.
@@ -28,8 +28,14 @@ randomized parameter vector (as configured). Never in the actor.
 ## Actions, float32, this order
 | # | Name | Dim | Mapping |
 |---|---|---|---|
-| 0 | hip_l, knee_l, hip_r, knee_r offset | 4 | target = stand pose + 0.5 * tanh-clipped action, rad |
-| 1 | wheel_l, wheel_r torque | 2 | tau = peak_torque_Nm * tanh-clipped action |
+| 0 | hip_l, knee_l, hip_r, knee_r offset | 4 | target = IK(commanded hip height) + 0.5 * y, rad |
+| 1 | wheel_l, wheel_r torque | 2 | tau = peak_torque_Nm * tanh(action) |
+
+Leg filter: y = 0.5 * tanh(action) + 0.5 * y_prev, per leg joint, at the policy
+rate. IK for the symmetric pose: q_hip = -acos((h - r_wheel) / (l_thigh + l_shank)),
+q_knee = -2 * q_hip. The "previous action" observation is the applied action,
+with the leg part filtered. Height command range: 0.159 to 0.23 m.
+
 Leg targets feed the PD defined in src/leg_actuator.py, identically in sim
 and firmware.
 
