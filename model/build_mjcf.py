@@ -15,6 +15,7 @@ OUT_PATH = Path(__file__).resolve().parent / "generated" / "biped.xml"
 BODY_PART = "2"
 WHEEL = "4"
 FLOOR_AFFINITY = "6"
+CTRL_HEADROOM = 1.15   # torque mode clamp above peak, so motor constant randomization above 1.0 has effect
 
 
 def fmt(*values):
@@ -103,6 +104,14 @@ def build_xml(p, mode = "position"):
         mass=fmt(ar["mass_kg"]), contype="0", conaffinity="0",
         rgba="0.6 0.3 0.3 1",
     )
+    if sl.get("top_radius_m"):
+        half_w = b["size_m"][1] / 2
+        ET.SubElement(
+            torso, "geom", name="shell_top_geom", type="cylinder",
+            fromto=fmt(0, -half_w, sl["top_z_m"], 0, half_w, sl["top_z_m"]),
+            size=fmt(sl["top_radius_m"]), mass="0",
+            contype=BODY_PART, conaffinity="0", rgba="0.3 0.3 0.6 0.4",
+        )
     for side, sy in (("l", hip_y), ("r", -hip_y)):
         thigh = ET.SubElement(torso, "body", name=f"thigh_{side}", pos=fmt(0, sy, 0))
         ET.SubElement(
@@ -160,6 +169,16 @@ def build_xml(p, mode = "position"):
                 contype=WHEEL, conaffinity="0", rgba="0.1 0.1 0.1 1",
             )
 
+    topology = p.get("legs", {}).get("topology", "serial")
+    belt = mode == "torque" and topology == "coaxial_belt"
+    if belt:
+        tendons = ET.SubElement(root, "tendon")
+        for side in ("l", "r"):
+            fx = ET.SubElement(tendons, "fixed", name=f"belt_{side}")
+            ET.SubElement(fx, "joint", joint=f"hip_{side}", coef="1")
+            ET.SubElement(fx, "joint", joint=f"knee_{side}", coef="1")
+
+    # Position mode is a kinematic debug model: joint space PD regardless of topology.
     act = ET.SubElement(root, "actuator")
     for side in ("l", "r"):
         for jn in ("hip", "knee"):
@@ -172,14 +191,15 @@ def build_xml(p, mode = "position"):
                     forcerange=fmt(-lm["peak_torque_Nm"], lm["peak_torque_Nm"]),
                 )
             else:
-                ET.SubElement(
-                    act, "motor", name=f"{jn}_{side}_torque", joint=f"{jn}_{side}",
-                    gear="1",
-                    ctrlrange=fmt(-lm["peak_torque_Nm"], lm["peak_torque_Nm"]),
-                )
+                lim = lm["peak_torque_Nm"] * CTRL_HEADROOM
+                target = ({"tendon": f"belt_{side}"} if (belt and jn == "knee")
+                          else {"joint": f"{jn}_{side}"})
+                ET.SubElement(act, "motor", name=f"{jn}_{side}_torque", gear="1",
+                              ctrlrange=fmt(-lim, lim), **target)
+        wlim = wm["peak_torque_Nm"] * CTRL_HEADROOM
         ET.SubElement(
             act, "motor", name=f"wheel_{side}_torque", joint=f"wheel_{side}", gear="1",
-            ctrlrange=fmt(-wm["peak_torque_Nm"], wm["peak_torque_Nm"]),
+            ctrlrange=fmt(-wlim, wlim),
         )
 
     sensors = ET.SubElement(root, "sensor")

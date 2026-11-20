@@ -54,7 +54,7 @@ def wilson(k, n, z=1.96):
             "n": n}
 
 
-def make_rollout(step_fn, net, params, n):
+def make_rollout(step_fn, net, params, n, to_motor):
     """Batched rollout. Each episode can receive one external push (push_k < 0: none)."""
     def one(state, push_k, push_dv):
         def body(st, t):
@@ -68,7 +68,7 @@ def make_rollout(step_fn, net, params, n):
             return st, dict(
                 tilt=jnp.arccos(jnp.clip(-g[2], -1.0, 1.0)), v=forward_velocity(d),
                 done=st.done, tau_leg=d.ctrl[LEG_CTRL], tau_w=d.ctrl[WHEEL_CTRL],
-                v_leg=d.qvel[LEG_V], v_w=d.qvel[WHEEL_V], h=d.qpos[2], cmd=st.cmd)
+                v_leg=to_motor(d.qvel[LEG_V]), v_w=d.qvel[WHEEL_V], h=d.qpos[2], cmd=st.cmd)
         _, out = jax.lax.scan(body, state, jnp.arange(n))
         return out
     return jax.jit(jax.vmap(one))
@@ -155,7 +155,7 @@ def main():
           f"(the first run compiles for several minutes)", flush=True)
     states = jax.jit(jax.vmap(init_state))(
         jnp.array([s[2] for s in specs]), jnp.array([s[3] for s in specs]))
-    roll_det = make_rollout(step_det, net, params, N_DET)
+    roll_det = make_rollout(step_det, net, params, N_DET, aux["to_motor"])
     out = {k: np.array(v) for k, v in roll_det(
         states, jnp.array([s[4] for s in specs]), jnp.array([s[5] for s in specs])).items()}
     tilt, v, done, h = out["tilt"], out["v"], out["done"], out["h"]
@@ -270,7 +270,7 @@ def main():
         print("Part B: training distribution episodes", flush=True)
         nb = N_EPISODES_B
         states_b = jax.jit(jax.vmap(reset_tr))(jax.random.split(jax.random.PRNGKey(123), nb))
-        roll_b = make_rollout(step_tr, net, params, N_STAT)
+        roll_b = make_rollout(step_tr, net, params, N_STAT, aux["to_motor"])
         ob = {k: np.array(x) for k, x in roll_b(
             states_b, jnp.full(nb, -1), jnp.zeros((nb, 2))).items()}
         d = ob["done"] > 0.5
@@ -320,7 +320,7 @@ def main():
             k_c = rc.integers(100, 301, nc)
             dv_c = np.stack([0.4 * np.cos(ang_c), 0.4 * np.sin(ang_c)], 1)
             states_c = jax.jit(jax.vmap(reset_c))(jax.random.split(jax.random.PRNGKey(7), nc))
-            roll_c = make_rollout(step_c, net, params, N_DET)
+            roll_c = make_rollout(step_c, net, params, N_DET, aux["to_motor"])
             oc = {k: np.array(x) for k, x in roll_c(
                 states_c, jnp.array(k_c), jnp.array(dv_c)).items()}
             okc = np.zeros(nc, dtype=bool)
@@ -341,7 +341,7 @@ def main():
             d_cfg = dict(b_cfg, push_max_norm=0.4)
             reset_d, step_d, _, _ = make_env(d_cfg)
             states_d = jax.jit(jax.vmap(reset_d))(jax.random.split(jax.random.PRNGKey(321), nb))
-            roll_d = make_rollout(step_d, net, params, N_STAT)
+            roll_d = make_rollout(step_d, net, params, N_STAT, aux["to_motor"])
             od = np.array(roll_d(states_d, jnp.full(nb, -1), jnp.zeros((nb, 2)))["done"]) > 0.5
             res["within_spec_fall"] = wilson(int(od[:, :N_STAT - 1].any(1).sum()), nb)
 

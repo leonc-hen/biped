@@ -28,8 +28,8 @@ from mujoco import mjx
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from src.env_s1 import (make_env, CONFIGS, EnvState, gravity_body, forward_velocity,  # noqa: E402
-                        ACT_SIZE, LEG_CTRL, WHEEL_CTRL, LEG_V, WHEEL_V)
+from src.env_s1 import (make_env, CONFIGS, gravity_body, forward_velocity,  # noqa: E402
+                        LEG_CTRL, WHEEL_CTRL, LEG_V, WHEEL_V)
 from src.ppo import ActorCritic  # noqa: E402
 
 DT = 0.01
@@ -43,7 +43,9 @@ def main():
         saved = pickle.load(f)
     params = saved["params"]
     env_name = saved["cfg"].get("env", "s1")
-    cfg = dict(CONFIGS[env_name], push_every_s=None, resample_s=None)
+    cfg = dict(CONFIGS[env_name])
+    cfg.update(saved["cfg"].get("env_overrides", {}))
+    cfg.update(push_every_s=None, resample_s=None, dr=False)
     reset, step, sizes, aux = make_env(cfg)
     net = ActorCritic(sizes["act"])
     p, model = aux["p"], aux["model"]
@@ -58,9 +60,7 @@ def main():
         qpos = qpos.at[2].set(r_w + h_t * math.cos(theta) + p["sim"]["spawn_clearance_m"])
         qpos = qpos.at[3:7].set(jnp.array([math.cos(theta / 2), 0.0, math.sin(theta / 2), 0.0]))
         data = mjx.forward(model, mjx.make_data(model).replace(qpos=qpos, qvel=jnp.zeros(model.nv)))
-        a0, z = jnp.zeros(ACT_SIZE), jnp.zeros(())
-        return EnvState(data, aux["get_obs"](data, a0, c), a0, c, z, z,
-                        jnp.zeros((), dtype=jnp.int32), jax.random.PRNGKey(0))
+        return aux["init_from_data"](data, c)
 
     @partial(jax.jit, static_argnums=1)
     def rollout(state, n):

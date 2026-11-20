@@ -113,6 +113,12 @@ def make_env(cfg=None):
     cpu_model = mujoco.MjModel.from_xml_string(build_xml(p, mode="torque"))
     model = mjx.put_model(cpu_model)
     lm, wm = p["leg_motor"], p["wheel_motor"]
+    coaxial = p.get("legs", {}).get("topology", "serial") == "coaxial_belt"
+
+    def to_motor(v):
+        """Joint order [hip_l, knee_l, hip_r, knee_r] to motor order. In the coaxial
+        belt leg motor 2 turns the shank's absolute angle, hip + knee."""
+        return v.at[1].add(v[0]).at[3].add(v[2]) if coaxial else v
     dt = p["sim"]["policy_dt_s"]
     phys_dt = p["sim"]["physics_dt_s"]
     n_sub = round(dt / phys_dt)
@@ -274,7 +280,8 @@ def make_env(cfg=None):
         def sub(d, j):
             # substep j: the action in force was issued 0, 1 or 2 ticks ago
             a_eff = hist[jnp.clip((dr["delay_sub"] - j + n_sub - 1) // n_sub, 0, 2)]
-            tau_leg = pd_torque(d.qpos[LEG_Q], d.qvel[LEG_V], base + 0.5 * a_eff[:4],
+            tau_leg = pd_torque(to_motor(d.qpos[LEG_Q]), to_motor(d.qvel[LEG_V]),
+                                to_motor(base + 0.5 * a_eff[:4]),
                                 kp, kd, lm["peak_torque_Nm"], leg_speed) * dr["kt_leg"]
             tau_w = wheel_peak * a_eff[4:6]
             if cfg["wheel_envelope"]:
@@ -336,6 +343,6 @@ def make_env(cfg=None):
     aux = dict(p=p, cfg=cfg, model=model, qpos0=qpos0, stand_leg=stand_leg, h_nom=h_nom,
                h_range=(h_lo, h_hi), lm=lm, wheel_peak=wheel_peak, ik=ik_jnp,
                nominal_dr=nominal_dr, sample_dr=sample_dr, apply_dr=apply_dr,
-               init_from_data=init_from_data)
+               init_from_data=init_from_data, to_motor=to_motor, coaxial=coaxial)
     return reset, step, dict(obs=OBS_SIZE, act=ACT_SIZE, n_sub=n_sub,
                              max_steps=max_steps), aux

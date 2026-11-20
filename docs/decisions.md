@@ -75,7 +75,7 @@ after at least two shell profile iterations, escalate to fallback 1 and
 reopen the R01 mass cap at a recorded gate decision.
 
 ### D09 Leg actuator class
-Status: Decided
+Status: Superseded by D19
 Decision: the CubeMars AK MIT command format (position, velocity, kp, kd,
 feedforward torque) stays as the control interface reference for D03 and
 D04, but AK actuators are not purchase candidates. Candidates must be
@@ -120,9 +120,80 @@ Reason: the full height command range fits within the action scale, and the
 filter stops the bang-bang leg torque seen in s1_v2.
 Firmware impact: one acos and one filter per leg joint per policy tick.
 
+### D19 Leg actuator design basis: CubeMars AK40-10
+Status: Decided (draft wording from repo results, pending review). Supersedes D09.
+Decision: the CubeMars AK40-10 (4.1 N m peak, 1.3 N m rated, 435 rpm no load
+at 24 V, 10:1, 195 g with driver) is the leg actuator design basis.
+params_legged.yaml leg_motor carries its numbers.
+Shortlist (tools/mass_budget.py: D20 coaxial belt leg, 155 mm legs, budget from
+docs/mass_budget.csv plus 10 percent contingency on unmeasured items; jump is
+the scripted rail jump, CoM rise above standing / wheel clearance; standing
+load is the static torque per leg motor at the nominal pose, percent of rated;
+speed is no load at 22.2 V):
+
+| Candidate | Peak N m | rad/s | g | Total kg | R01 | Jump cm | Standing load | USD per unit |
+|---|---|---|---|---|---|---|---|---|
+| CubeMars AK40-10 | 4.1 | 42.1 | 195 | 1.924 | under target | 17.5 / 10.2 | 77 % | 136-163 |
+| CubeMars AKE40-6 + driver | 5.5 | 32.0 | 170 | 1.824 | under target | 18.8 / 12.5 | 53 % | not listed |
+| SteadyWin GIM4305-10 | 3.47 | 35.5 | 150 | 1.744 | under target | 13.8 / 8.0 | 91 % | 70-132 |
+| SteadyWin GIM4310-10 V1.1 | 5.6 | 22.1 | 227 | 2.052 | under cap | 17.7 / 9.2 | 52 % | 82 + driver |
+| DJI M2006 + C610 | 1.8 | 48.4 | 107 | 1.572 | under target | 8.3 / 3.2 | 82 % | 41-95 + ESC |
+
+Numbers are at the pre-17a placeholder geometry; rerun at the 17a parameters
+they move by at most 0.3 cm and 2 points.
+Reasons: keeps the robot under the R01 target with a listed price and an
+integrated driver, and clears the 10 cm jump target (R06 as amended, D18) with
+margin. The AKE40-6 scores better on every column but has no listed price and
+an assumed driver mass; the GIM4310 pushes the total over the 2.0 kg target;
+the GIM4305 runs at 91 percent of rated just standing; the M2006 misses the
+jump target.
+Costs: standing load is 77 percent of rated at 1.924 kg, more near the
+2.25 kg cap, and it sits on both motors of each leg (D20). Heavier than D09's
+150 g cap and above its 1 to 3 N m band, hence the supersession. The rotor
+inertia (540 g cm2) is assumed to be output side; confirm in the CubeMars manual.
+Rejected: the other shortlist rows, for the reasons above.
+Revisit trigger: the AKE40-6 gets a listed price and driver, or bench tests
+show the standing load overheating the AK40-10.
+
+### D20 Coaxial belt knee
+Status: Decided (draft wording from repo results, pending review)
+Decision: both leg motors sit on the torso at the hip. Motor 1 turns the hip
+joint. Motor 2 turns the shank through a 1:1 belt along the thigh, so its
+angle is hip + knee. Each motor runs its own PD on motor angle and speed inside
+its own torque speed envelope (interface v0.3). In sim the belt is a fixed
+tendon over hip and knee, driven by the knee actuator in torque mode
+(model/build_mjcf.py).
+Reasons:
+- Jump (Step 15, src/actuator_candidates.py, 155 mm legs, 2.0 kg, pre-17a
+  geometry, CoM rise / wheel clearance in cm, serial then coaxial): AK40-10
+  11.1 / 4.9 and 14.9 / 7.6; AKE40-6 11.9 / 5.6 and 16.8 / 9.4; GIM4310-10
+  8.3 / 2.4 and 14.4 / 7.1. Both motors work during the push, and the belt
+  motor turns at about half the knee speed, so speed limited motors stay in
+  the high torque part of their envelope.
+- Mass (Step 16, tools/mass_budget.py): with all four actuators on the torso
+  the legs carry only links and the belt (65 g thigh, 30 g shank), and the
+  AK40-10 build totals 1.924 kg, under the R01 target (D19).
+Costs:
+1. Standing, the hip motor holds a torque equal and opposite to the belt
+   motor's to keep the torso level, so both motors of a leg carry the full
+   static knee torque (77 percent of rated for the AK40-10, D19).
+2. Belt mass, about 5 percent belt loss and belt compliance are not modelled,
+   so the jump numbers are slightly optimistic.
+3. Firmware maps joint targets to motor targets (m1 = hip, m2 = hip + knee)
+   and motor angles back to joint angles, and the per motor PD couples the
+   joints: the hip sees the stiffness of both motors.
+Known model gap: the torque speed envelope does not brake a motor that is
+driven past its no load speed. Under full drive on an airborne leg the belt
+motor drags the hip motor to 72.6 rad/s against a 45.6 limit; the scripted
+jumps overshoot by at most 2 percent.
+Rejected: serial leg with the knee motor at the knee (lower jump and wheel
+clearance, more mass at the knee).
+Revisit trigger: belt slip, stretch or backlash in bring up, or a measured
+belt loss well above 5 percent.
+
 ## Deferred to Phase 2 data (decide at Gate A)
 
-Leg topology (knee motor at the knee, or both motors at the hip with a linkage to keep the leg light); exact actuator models and gear ratios; leg lengths; wheel size; battery capacity.
+Exact wheel motor model and gear ratio; leg lengths; wheel size; battery capacity. Leg topology is decided in D20 and the leg actuator in D19.
 Deadline: Gate A.
 
 ## Deferred to Phase 3 (decide at Gate B)

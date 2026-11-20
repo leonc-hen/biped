@@ -1,0 +1,14 @@
+item,qty,unit_g,body,status,note
+battery 6S 450 to 650 mAh,1,100,torso,estimate,sized properly in the battery step
+controller board (STM32 + CAN + IMU + regulators),1,30,torso,estimate,
+wiring and connectors,1,60,torso,estimate,
+torso frame and cover,1,150,torso,estimate,
+D08 shell rails,2,40,torso,estimate,printed
+arm placeholder (locked for S5),1,120,torso,placeholder,real arm is a later phase
+fasteners and bearings,1,60,torso,estimate,
+wheel motor driver,2,15,torso,estimate,
+belt drive (pulleys + belt + tensioner),2,25,thigh,estimate,D20 coaxial belt knee
+thigh link 155 mm,2,40,thigh,estimate,carbon tube or printed
+shank link 155 mm,2,30,shank,estimate,
+wheel motor,2,80,wheel,estimate,sized properly in the wheel motor step
+wheel and tire 60 mm,2,30,wheel,estimate,

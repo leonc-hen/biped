@@ -51,6 +51,7 @@ def scaled_params(p, length):
         p[part]["mass_kg"] *= k
         i = p[part]["inertia_kgm2"]
         p[part]["inertia_kgm2"] = [i[0] * k ** 3, i[1] * k ** 3, i[2] * k]
+    p["legs"] = dict(p.get("legs", {}), topology="serial")   # coaxial is emulated in motor_torques
     return p
 
 

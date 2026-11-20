@@ -13,45 +13,51 @@ sim:
   spawn_clearance_m: 0.002
 
 pose:
-  nominal_hip_height_m: 0.19          # mid working height, axle under the hip
-  height_cmd_range_m: [0.159, 0.21]   # commanded range, independent of joint limits
+  nominal_hip_height_m: 0.25
+  height_cmd_range_m: [0.15, 0.30]   # R02 15 to 30 cm; top respects D15 (straight leg 0.34)
+
+legs:
+  topology: coaxial_belt            # D20: both motors at the hip, belt drives the shank
 
 body:
-  mass_kg: 0.90
+  mass_kg: 1.314                    # budget torso 0.630 + contingency 0.104 + 4 x 0.195 (AK40-10),
+                                    # minus shell 0.08 and arm 0.12, which have their own bodies
   size_m: [0.12, 0.12, 0.06]
-  com_height_above_hips_m: 0.04
-  inertia_kgm2: [0.00135, 0.00135, 0.00216]
+  com_height_above_hips_m: 0.01   # was 0.04; actuators (0.78 kg) sit on the hip axis in the coaxial leg
+  inertia_kgm2: [0.00197, 0.00197, 0.00315]   # placeholder box scaled by mass; replace from CAD
   hip_separation_m: 0.14
 
 shell:                         # NEW, D08 self righting profile, placeholder geometry
-  mass_kg: 0.10                # both side rails together
+  mass_kg: 0.08                # both side rails together
   side_radius_m: 0.055        # must exceed half the body height (0.03) to define the roll
   length_m: 0.10
   y_offset_m: 0.06             # each rail center from the body midline
   z_offset_m: 0.0
+  top_radius_m: 0.07     # NEW: rounded top so upside down is not a resting pose (D08)
+  top_z_m: 0.04          # cylinder axis height above the hips, at the box center
 
 arm:                           # NEW, locked arm placeholder for S5; real arm is a later phase
   mass_kg: 0.12
   com_above_hips_m: 0.10
 
 thigh:
-  mass_kg: 0.12
-  length_m: 0.11
+  mass_kg: 0.065                    # link 40 g + belt drive 25 g
+  length_m: 0.155
   radius_m: 0.01
-  inertia_kgm2: [0.000121, 0.000121, 0.000006]
+  inertia_kgm2: [0.000130, 0.000130, 0.000003]
 
 shank:
-  mass_kg: 0.06
-  length_m: 0.11
+  mass_kg: 0.030
+  length_m: 0.155
   radius_m: 0.008
-  inertia_kgm2: [0.0000605, 0.0000605, 0.000003]
+  inertia_kgm2: [0.000060, 0.000060, 0.000001]
 
 wheel:
-  mass_kg: 0.12
+  mass_kg: 0.110                    # wheel motor 80 g + wheel and tire 30 g
   radius_m: 0.03
   width_m: 0.02
   geom_type: cylinder      # cylinder | sphere; sphere is the MJX fallback (D note if used)
-  inertia_kgm2: [0.000031, 0.000054, 0.000031]
+  inertia_kgm2: [0.0000284, 0.0000495, 0.0000284]
 
 joints:
   hip: {range_rad: [-1.3, 1.5]}       # was -1.0; sim derived requirement, see D14
@@ -60,13 +66,14 @@ joints:
   wheel_damping_Nms_per_rad: 0.0005
   frictionloss_Nm: 0.005
 
-leg_motor:
-  gear_ratio: 9.0
-  rotor_inertia_kgm2: 0.000002
-  peak_torque_Nm: 3.0
-  max_speed_rad_s: 20.0        # NEW, output side, placeholder for the speed dependent limit
-  kp_Nm_per_rad: 15.0
-  kv_Nms_per_rad: 0.4
+leg_motor:                          # design basis: CubeMars AK40-10 (D19)
+  gear_ratio: 10.0
+  rotor_inertia_kgm2: 0.00000054    # gives 5.4e-5 kg m2 at the output; CubeMars lists 540 g cm2,
+                                    # assumed output side; confirm in their manual
+  peak_torque_Nm: 4.1
+  max_speed_rad_s: 45.6             # 435 rpm no load at 24 V; randomization scales it with battery voltage
+  kp_Nm_per_rad: 30.0               # raised from 15: the heavier, longer leg sagged 7 mm at 15
+  kv_Nms_per_rad: 0.8
   torque_constant_Nm_per_A: 0.1
   resistance_ohm: 0.3
 

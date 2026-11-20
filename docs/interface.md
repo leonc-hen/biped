@@ -1,4 +1,4 @@
-# Policy interface, v0.2
+# Policy interface, v0.3
 
 Single definition for training, export and firmware. Any change bumps the
 version and is a decisions.md entry. Order, units and scaling are normative.
@@ -34,10 +34,17 @@ randomized parameter vector (as configured). Never in the actor.
 Leg filter: y = 0.5 * tanh(action) + 0.5 * y_prev, per leg joint, at the policy
 rate. IK for the symmetric pose: q_hip = -acos((h - r_wheel) / (l_thigh + l_shank)),
 q_knee = -2 * q_hip. The "previous action" observation is the applied action,
-with the leg part filtered. Height command range: 0.159 to 0.23 m.
+with the leg part filtered. Height command range: 0.15 to 0.30 m.
 
 Leg targets feed the PD defined in src/leg_actuator.py, identically in sim
 and firmware.
+
+## Leg drive (v0.3, D20 coaxial belt)
+Motor 1 turns the hip joint. Motor 2 sits at the hip and turns the shank through a
+belt, so its angle is hip + knee. Firmware maps joint targets to motor targets
+(m1 = hip, m2 = hip + knee), runs one PD loop per motor on motor angle and speed
+inside that motor's torque speed envelope, and reports joint angles back to the
+policy (hip = m1, knee = m2 - m1). Observations and actions stay in joint space.
 
 ## Conventions
 As docs/conventions.md: x forward, joint axes +y, positive hip and knee swing

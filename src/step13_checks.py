@@ -55,7 +55,27 @@ def spawn_penetration_mm(model, data):
     return 1000.0 * min(data.contact[i].dist for i in range(data.ncon))
 
 
+def place_on_floor(model, data):
+    """Lower the robot from high up until any part touches the floor, then back off
+    3 mm, so lying poses start resting instead of dropped or interpenetrating."""
+    floor = model.geom("floor").id
+
+    def touching():
+        return any(floor in (data.contact[i].geom1, data.contact[i].geom2)
+                   for i in range(data.ncon))
+
+    data.qpos[2] = 0.5
+    data.qvel[:] = 0.0
+    mujoco.mj_forward(model, data)
+    while not touching() and data.qpos[2] > -0.5:
+        data.qpos[2] -= 0.002
+        mujoco.mj_forward(model, data)
+    data.qpos[2] += 0.003
+    mujoco.mj_forward(model, data)
+
+
 RAMP_S, HOLD_S = 0.6, 0.6
+SETTLE_S = 2.5
 HIP_Q, KNEE_Q = [7, 10], [8, 11]
 
 
@@ -65,8 +85,10 @@ def sweep(model, data, key_name, metric_col, writer):
     jr = load_params()["joints"]
     mujoco.mj_resetDataKeyframe(model, data, model.key(key_name).id)
     mujoco.mj_forward(model, data)
+    place_on_floor(model, data)
     pen = spawn_penetration_mm(model, data)
-    settle(model, data, 1.0)
+    settle(model, data, SETTLE_S)
+    rest_w = wheels_on_floor(model, data)
     q0, v0 = data.qpos.copy(), data.qvel.copy()
     base_angle = axis_vs_up_deg(model, data, metric_col)
 
@@ -91,7 +113,7 @@ def sweep(model, data, key_name, metric_col, writer):
                              round(hip, 3), round(knee, 3), w, round(change, 1)])
             if change > best[0]:
                 best = (change, hip, knee, w)
-    return base_angle, best, pen
+    return base_angle, best, pen, rest_w
 
 
 def sweep_side(model, data, writer):
@@ -101,8 +123,9 @@ def sweep_side(model, data, writer):
     jr = load_params()["joints"]
     mujoco.mj_resetDataKeyframe(model, data, model.key("lying_side").id)
     mujoco.mj_forward(model, data)
+    place_on_floor(model, data)
     pen = spawn_penetration_mm(model, data)
-    settle(model, data, 1.0)
+    settle(model, data, SETTLE_S)
     q0, v0 = data.qpos.copy(), data.qvel.copy()
     base_angle = axis_vs_up_deg(model, data, 1)
     rest_z = axis_vs_up_deg(model, data, 2)
@@ -151,13 +174,16 @@ def main():
 
         # 1 front and back: body z axis vs up; flat is near 90, pitching up reduces it
         for key in ("lying_front", "lying_back"):
-            base, (gain, hip, knee, wh), pen = sweep(model, data, key, 2, w)
-            valid = pen > -2.0 and 45.0 <= base <= 135.0
-            good = valid and gain >= 15.0 and wh == 2
+            base, (gain, hip, knee, wh), pen, rest_w = sweep(model, data, key, 2, w)
+            self_righted = base < 45.0 and rest_w == 2      # rolled most of the way up onto its wheels
+            valid = pen > -2.0 and (45.0 <= base <= 135.0 or self_righted)
+            good = valid and (self_righted or (gain >= 15.0 and wh == 2))
             ok &= good
+            note = "self-righted onto its wheels" if self_righted else ""
             print(f"{key:12s} spawn pen {pen:+5.1f} mm   rest tilt {base:5.1f} deg   "
                   f"best pitch up {gain:+5.1f} deg at hip {hip:+.2f} knee {knee:+.2f} rad, "
-                  f"wheels {wh}/2   {'PASS' if good else ('INVALID START' if not valid else 'FAIL')}")
+                  f"wheels {wh}/2   {note}   "
+                  f"{'PASS' if good else ('INVALID START' if not valid else 'FAIL')}")
 
         # 2 side: body y axis vs up, near 0 on the side; the minimum change (most
         # negative) is the largest roll off the rail
@@ -171,6 +197,18 @@ def main():
               f"best roll {-gain:+5.1f} deg at hl {pose[0]:+.2f} kl {pose[1]:+.2f} "
               f"hr {pose[2]:+.2f} kr {pose[3]:+.2f}   {note}   "
               f"{'PASS' if good else ('INVALID START' if not valid else 'FAIL')}")
+
+        # upside down must not be a resting pose (D08): it should roll onto front or back
+        mujoco.mj_resetDataKeyframe(model, data, model.key("stand").id)
+        data.qpos[3:7] = (0.0436, 0.0, 0.999, 0.0)      # 175 deg about y, slightly off balance
+        mujoco.mj_forward(model, data)
+        place_on_floor(model, data)
+        settle(model, data, SETTLE_S)
+        z_ang = axis_vs_up_deg(model, data, 2)
+        good = 45.0 <= z_ang <= 135.0
+        ok &= good
+        print(f"{'upside_down':12s} rests at {z_ang:5.1f} deg   "
+              f"{'PASS (rolled onto front or back)' if good else 'FAIL (stays inverted)'}")
 
     print(f"wrote {out.relative_to(ROOT)}")
     print("ALL PASS" if ok else "SOME CHECKS FAILED")

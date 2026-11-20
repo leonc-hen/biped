@@ -30,10 +30,13 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--env", choices=sorted(CONFIGS), default="s1")
     ap.add_argument("--init_from")
+    ap.add_argument("--dr_scale", type=float, default=None)
     args = ap.parse_args()
-    cfg = dict(CFG, total_steps=args.steps, resume=args.resume, seed=args.seed, env=args.env,
+    env_overrides = {} if args.dr_scale is None else {"dr_scale": args.dr_scale}
+    cfg = dict(CFG, total_steps=args.steps, resume=args.resume, seed=args.seed,
+               env=args.env, env_overrides=env_overrides,
                init_from=str(ROOT / "runs" / args.init_from / "ckpt.pkl") if args.init_from else None)
-    reset_fn, step_fn, sizes, aux = make_env(CONFIGS[args.env])
+    reset_fn, step_fn, sizes, aux = make_env(dict(CONFIGS[args.env], **env_overrides))
     train(cfg, reset_fn, step_fn, sizes, ROOT / "runs" / args.name)
 
 

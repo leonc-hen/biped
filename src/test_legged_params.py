@@ -9,7 +9,7 @@ from tools.params import (
 
 def test_total_mass_includes_shell_and_arm():
     p = load_params()
-    assert abs(total_mass(p) - 1.72) < 1e-9  # update together with the mass budget
+    assert abs(total_mass(p) - 1.924) < 1e-9  # update together with the mass budget
 
 
 def test_ik_round_trip():

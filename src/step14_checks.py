@@ -31,6 +31,7 @@ def rail(data):
 
 def run_ramp(model, data, p, mode):
     lm = p["leg_motor"]
+    coaxial = p.get("legs", {}).get("topology", "serial") == "coaxial_belt"
     q1, q2 = leg_ik(p, p["pose"]["nominal_hip_height_m"])
     c1, c2 = leg_ik(p, 0.16)
     mujoco.mj_resetDataKeyframe(model, data, model.key("stand").id)
@@ -46,9 +47,11 @@ def run_ramp(model, data, p, mode):
         else:
             q = data.qpos[[HIP_Q[0], KNEE_Q[0], HIP_Q[1], KNEE_Q[1]]]
             v = data.qvel[LEG_V]
-            data.ctrl[leg_ctrl] = pd_torque(q, v, tgt, lm["kp_Nm_per_rad"],
-                                            lm["kv_Nms_per_rad"], lm["peak_torque_Nm"],
-                                            lm["max_speed_rad_s"])
+            tau = pd_torque(q, v, tgt, lm["kp_Nm_per_rad"], lm["kv_Nms_per_rad"],
+                            lm["peak_torque_Nm"], lm["max_speed_rad_s"])
+            if coaxial:   # belt motor carries the knee torque; hip motor makes up the rest
+                tau = np.array([tau[0] - tau[1], tau[1], tau[2] - tau[3], tau[3]])
+            data.ctrl[leg_ctrl] = tau
         data.ctrl[wheel_ctrl] = 0.0
         rail(data)
         mujoco.mj_step(model, data)
@@ -58,6 +61,7 @@ def run_ramp(model, data, p, mode):
 
 def main():
     p = load_params()
+    coaxial = p.get("legs", {}).get("topology", "serial") == "coaxial_belt"
     m_pos = mujoco.MjModel.from_xml_string(build_xml(p, mode="position"))
     m_trq = mujoco.MjModel.from_xml_string(build_xml(p, mode="torque"))
     ok = True
@@ -79,6 +83,8 @@ def main():
     lm = p["leg_motor"]
     for _ in range(int(1.0 / m_trq.opt.timestep)):
         v = data.qvel[LEG_V]
+        if coaxial:
+            v = np.array([v[0], v[0] + v[1], v[2], v[2] + v[3]])
         from src.leg_actuator import torque_envelope
         drive, _ = torque_envelope(v, lm["peak_torque_Nm"], lm["max_speed_rad_s"])
         data.ctrl[[0, 1, 3, 4]] = drive          # push as hard as the envelope allows
@@ -86,7 +92,10 @@ def main():
         data.qpos[0:7] = (0, 0, 0.6, 1, 0, 0, 0)
         data.qvel[0:6] = 0.0
         mujoco.mj_step(m_trq, data)
-    v_max = np.max(np.abs(data.qvel[LEG_V]))
+    v = data.qvel[LEG_V]
+    if coaxial:
+        v = np.array([v[0], v[0] + v[1], v[2], v[2] + v[3]])
+    v_max = np.max(np.abs(v))
     good = v_max <= lm["max_speed_rad_s"] * 1.02
     ok &= good
     print(f"2 speed envelope     peak leg speed {v_max:5.1f} rad/s   "
