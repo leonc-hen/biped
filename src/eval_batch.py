@@ -32,7 +32,7 @@ from mujoco import mjx
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from src.env_s1 import (make_env, CONFIGS, gravity_body, forward_velocity,  # noqa: E402
-                        LEG_CTRL, WHEEL_CTRL, LEG_V, WHEEL_V)
+                        LEG_CTRL, WHEEL_CTRL, LEG_Q, LEG_V, WHEEL_V)
 from src.ppo import ActorCritic  # noqa: E402
 
 DT = 0.01
@@ -68,7 +68,8 @@ def make_rollout(step_fn, net, params, n, to_motor):
             return st, dict(
                 tilt=jnp.arccos(jnp.clip(-g[2], -1.0, 1.0)), v=forward_velocity(d),
                 done=st.done, tau_leg=d.ctrl[LEG_CTRL], tau_w=d.ctrl[WHEEL_CTRL],
-                v_leg=to_motor(d.qvel[LEG_V]), v_w=d.qvel[WHEEL_V], h=d.qpos[2], cmd=st.cmd)
+                v_leg=to_motor(d.qvel[LEG_V]), v_w=d.qvel[WHEEL_V], h=d.qpos[2], cmd=st.cmd,
+                q_leg=d.qpos[LEG_Q])
         _, out = jax.lax.scan(body, state, jnp.arange(n))
         return out
     return jax.jit(jax.vmap(one))
@@ -175,6 +176,9 @@ def main():
     tilt_eq = float(tilt[0, 100:500].mean())
     res["standing_tilt_mean_deg"] = round(math.degrees(tilt_eq), 3)
     res["standing_tilt_std_deg"] = round(math.degrees(float(tilt[0, 100:500].std())), 3)
+    hips = out["q_leg"][0, 100:500]
+    stagger = float(np.abs(hips[:, 0] - hips[:, 2]).mean())
+    res["standing_hip_stagger_rad"] = round(stagger, 3)
 
     def success(i):
         kind, _, _, _, _, _, end = specs[i]
@@ -366,6 +370,7 @@ def main():
             res["push_rand_0.4_success"]["ci95"][0] >= 0.90,
         "tracks 1.0 m/s": res.get("track_1.0_settle_s") is not None,
         "torso lean under 3 deg": tilt_eq < math.radians(3.0),
+        "hips within 0.2 rad of each other standing": stagger < 0.2,
     }
     if env_name != "s1":
         nominal["height within 10 mm at all three"] = all(

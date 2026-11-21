@@ -35,6 +35,7 @@ WHEEL_CTRL = jnp.array([2, 5])
 OBS_SIZE, ACT_SIZE = 27, 6
 EPISODE_S = 10.0
 Q_RES = 2 * math.pi / 16384          # 14 bit joint encoder
+TARGET_MARGIN = 0.05
 W = dict(track_v=1.0, track_v_fine=1.0, track_yaw=0.5, upright=0.5,
          torque=1e-3, action_rate=1e-2, fall=5.0)
 
@@ -44,13 +45,15 @@ S1 = dict(name="s1", height_cmd=False, resample_s=None, push_every_s=None,
           height_sigma2_fine=None, dr=False, dr_scale=0.0, wheel_envelope=False,
           cmd_fixed=None, reset_perturb=True, noise_scale=None, delay_fixed_ms=None,
           w_angvel=0.02, angvel_roll_pitch_only=False,
-          w_track_v_sharp=0.0, track_v_sharp_sigma2=0.0025, push_max_norm=None)
+          w_track_v_sharp=0.0, track_v_sharp_sigma2=0.0025, push_max_norm=None,
+          w_posture=0.0, w_hip_sym=0.0)
 S2 = dict(S1, name="s2", height_cmd=True, resample_s=3.0, push_every_s=6.0,
           push_dv=(0.6, 0.4), leg_filter_alpha=0.5,
           w_tilt=0.5, tilt_sigma2=0.003, w_height=1.0, height_sigma2=0.0025,
           height_sigma2_fine=0.0004)
 S2R = dict(S2, name="s2r", dr=True, dr_scale=1.0, wheel_envelope=True,
-           w_angvel=0.1, angvel_roll_pitch_only=True, w_track_v_sharp=0.5)
+           w_angvel=0.1, angvel_roll_pitch_only=True, w_track_v_sharp=0.5,
+           w_posture=0.3, w_hip_sym=5.0)
 CONFIGS = dict(s1=S1, s2=S2, s2r=S2R)
 
 
@@ -127,6 +130,9 @@ def make_env(cfg=None):
     h_nom = p["pose"]["nominal_hip_height_m"]
     q1, q2 = leg_ik(p, h_nom)
     stand_leg = jnp.array([q1, q2, q1, q2])
+    jr = p["joints"]
+    j_lo = jnp.array([jr["hip"]["range_rad"][0], jr["knee"]["range_rad"][0]] * 2) + TARGET_MARGIN
+    j_hi = jnp.array([jr["hip"]["range_rad"][1], jr["knee"]["range_rad"][1]] * 2) - TARGET_MARGIN
     h_lo, h_hi = p["pose"]["height_cmd_range_m"]
     r_w = p["wheel"]["radius_m"]
     l12 = p["thigh"]["length_m"] + p["shank"]["length_m"]
@@ -280,8 +286,8 @@ def make_env(cfg=None):
         def sub(d, j):
             # substep j: the action in force was issued 0, 1 or 2 ticks ago
             a_eff = hist[jnp.clip((dr["delay_sub"] - j + n_sub - 1) // n_sub, 0, 2)]
-            tau_leg = pd_torque(to_motor(d.qpos[LEG_Q]), to_motor(d.qvel[LEG_V]),
-                                to_motor(base + 0.5 * a_eff[:4]),
+            tgt_j = jnp.clip(base + 0.5 * a_eff[:4], j_lo, j_hi)
+            tau_leg = pd_torque(to_motor(d.qpos[LEG_Q]), to_motor(d.qvel[LEG_V]), to_motor(tgt_j),
                                 kp, kd, lm["peak_torque_Nm"], leg_speed) * dr["kt_leg"]
             tau_w = wheel_peak * a_eff[4:6]
             if cfg["wheel_envelope"]:
@@ -314,6 +320,9 @@ def make_env(cfg=None):
         cost_rate = jnp.sum(jnp.square(a - state.prev_action))
         ang = data.qvel[3:5] if cfg["angvel_roll_pitch_only"] else data.qvel[3:6]
         cost_angvel = jnp.sum(jnp.square(ang))
+        q_j = data.qpos[LEG_Q]
+        cost_posture = jnp.sum(jnp.square(q_j - ik_jnp(state.cmd[2])))
+        cost_hip_sym = jnp.square(q_j[0] - q_j[2])
         track_v_sharp = jnp.exp(-jnp.square(err_v) / cfg["track_v_sharp_sigma2"])
 
         steps = state.steps + 1
@@ -325,6 +334,7 @@ def make_env(cfg=None):
                   - W["torque"] * cost_tau - W["action_rate"] * cost_rate
                   - cfg["w_angvel"] * cost_angvel
                   + cfg["w_track_v_sharp"] * track_v_sharp
+                  - cfg["w_posture"] * cost_posture - cfg["w_hip_sym"] * cost_hip_sym
                   - W["fall"] * fell.astype(jnp.float32))
 
         cmd = state.cmd
