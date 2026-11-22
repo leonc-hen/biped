@@ -176,6 +176,8 @@ def main():
     tilt_eq = float(tilt[0, 100:500].mean())
     res["standing_tilt_mean_deg"] = round(math.degrees(tilt_eq), 3)
     res["standing_tilt_std_deg"] = round(math.degrees(float(tilt[0, 100:500].std())), 3)
+    seg = tilt[0, 100:500] - tilt[0, 100:500].mean()
+    res["standing_wobble_hz"] = round(np.count_nonzero(np.diff(np.sign(seg)) != 0) / 2 / 4.0, 1)
     l1, l2 = p["thigh"]["length_m"], p["shank"]["length_m"]
     hips = out["q_leg"][0, 100:500]
     foot = lambda qh, qk: -(l1 * np.sin(qh) + l2 * np.sin(qh + qk))
@@ -318,7 +320,7 @@ def main():
         if b_cfg["dr"]:
             print(f"Part C: R07 pushes under randomization, scale {b_cfg['dr_scale']}", flush=True)
             c_cfg = dict(b_cfg, push_every_s=None, resample_s=None,
-                         cmd_fixed=(0.0, 0.0, h_nom), reset_perturb=False)
+                         cmd_fixed=(0.0, 0.0, h_nom), reset_perturb=False, delay_max_ms=10.0)
             reset_c, step_c, _, _ = make_env(c_cfg)
             nc = 1000
             rc = np.random.default_rng(1)
@@ -330,21 +332,28 @@ def main():
             oc = {k: np.array(x) for k, x in roll_c(
                 states_c, jnp.array(k_c), jnp.array(dv_c)).items()}
             okc = np.zeros(nc, dtype=bool)
+            reasons = {"fell": 0, "lean offset": 0, "wobble": 0, "still moving": 0}
             for i in range(nc):
                 if (oc["done"][i] > 0.5).any():
+                    reasons["fell"] += 1
                     continue
                 k = int(k_c[i])
                 pre = oc["tilt"][i, k - 50:k].mean()      # each robot's own equilibrium
                 tail = oc["tilt"][i, N_DET - 50:]
-                okc[i] = (abs(tail.mean() - pre) < DEG2 and tail.std() < DEG1
-                          and abs(oc["v"][i, N_DET - 50:].mean()) < 0.1)
+                lean_ok = abs(tail.mean() - pre) < DEG2
+                wob_ok = tail.std() < DEG1
+                spd_ok = abs(oc["v"][i, N_DET - 50:].mean()) < 0.1
+                okc[i] = lean_ok and wob_ok and spd_ok
+                if not okc[i]:
+                    reasons["lean offset" if not lean_ok else "wobble" if not wob_ok else "still moving"] += 1
+            res["dr_push_fail_reasons"] = reasons
             res["dr_push_0.4_success"] = wilson(int(okc.sum()), nc)
             sec_c = (((ang_c + math.pi / 8) % (2 * math.pi)) // (math.pi / 4)).astype(int)
             res["dr_push_0.4_by_sector"] = {
                 SECTORS[s]: round(float(okc[sec_c == s].mean()), 3) for s in range(8)}
 
             print("Part D: training distribution with pushes limited to R07", flush=True)
-            d_cfg = dict(b_cfg, push_max_norm=0.4)
+            d_cfg = dict(b_cfg, push_max_norm=0.4, delay_max_ms=10.0)
             reset_d, step_d, _, _ = make_env(d_cfg)
             states_d = jax.jit(jax.vmap(reset_d))(jax.random.split(jax.random.PRNGKey(321), nb))
             roll_d = make_rollout(step_d, net, params, N_STAT, aux["to_motor"])
