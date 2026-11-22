@@ -176,9 +176,11 @@ def main():
     tilt_eq = float(tilt[0, 100:500].mean())
     res["standing_tilt_mean_deg"] = round(math.degrees(tilt_eq), 3)
     res["standing_tilt_std_deg"] = round(math.degrees(float(tilt[0, 100:500].std())), 3)
+    l1, l2 = p["thigh"]["length_m"], p["shank"]["length_m"]
     hips = out["q_leg"][0, 100:500]
-    stagger = float(np.abs(hips[:, 0] - hips[:, 2]).mean())
-    res["standing_hip_stagger_rad"] = round(stagger, 3)
+    foot = lambda qh, qk: -(l1 * np.sin(qh) + l2 * np.sin(qh + qk))
+    stagger_mm = float(np.abs(foot(hips[:, 0], hips[:, 1]) - foot(hips[:, 2], hips[:, 3])).mean() * 1000)
+    res["standing_wheel_stagger_mm"] = round(stagger_mm, 1)
 
     def success(i):
         kind, _, _, _, _, _, end = specs[i]
@@ -346,8 +348,31 @@ def main():
             reset_d, step_d, _, _ = make_env(d_cfg)
             states_d = jax.jit(jax.vmap(reset_d))(jax.random.split(jax.random.PRNGKey(321), nb))
             roll_d = make_rollout(step_d, net, params, N_STAT, aux["to_motor"])
-            od = np.array(roll_d(states_d, jnp.full(nb, -1), jnp.zeros((nb, 2)))["done"]) > 0.5
-            res["within_spec_fall"] = wilson(int(od[:, :N_STAT - 1].any(1).sum()), nb)
+            out_d = {k: np.array(x) for k, x in roll_d(
+                states_d, jnp.full(nb, -1), jnp.zeros((nb, 2))).items()}
+            fell_d = (out_d["done"] > 0.5)[:, :N_STAT - 1].any(1)
+            res["within_spec_fall"] = wilson(int(fell_d.sum()), nb)
+            drd = {k: np.array(v) for k, v in states_d.dr.items()}
+            cmd_d = out_d["cmd"]
+            factors = {
+                "battery_V": drd["v_scale"] * 24.0,
+                "friction": drd["mu"],
+                "delay_ms": drd["delay_sub"] * 1000.0 * p["sim"]["physics_dt_s"],
+                "slope_deg": np.degrees(np.arccos(np.clip(-drd["g_unit"][:, 2], -1.0, 1.0))),
+                "torso_com_x_mm": drd["com_offset"][:, 0] * 1000.0,
+                "max_cmd_speed_m_s": np.abs(cmd_d[..., 0]).max(1),
+                "max_cmd_yaw_rad_s": np.abs(cmd_d[..., 1]).max(1),
+                "max_cmd_height_m": cmd_d[..., 2].max(1),
+            }
+            table = {}
+            print("  within spec fall rate by factor (thirds of the 1000 episodes):")
+            for name, x in factors.items():
+                b = np.digitize(x, np.quantile(x, [1 / 3, 2 / 3]))
+                row = {f"{x[b == k].min():.3g} to {x[b == k].max():.3g}": round(float(fell_d[b == k].mean()), 3)
+                       for k in range(3) if (b == k).any()}
+                table[name] = row
+                print(f"    {name:20s} " + "   ".join(f"{r}: {v:.3f}" for r, v in row.items()))
+            res["within_spec_fall_by_factor"] = table
 
     res["runtime_s"] = round(time.time() - t0, 1)
     tag = "" if args.dr_scale is None else f"_dr{args.dr_scale}"
@@ -370,7 +395,7 @@ def main():
             res["push_rand_0.4_success"]["ci95"][0] >= 0.90,
         "tracks 1.0 m/s": res.get("track_1.0_settle_s") is not None,
         "torso lean under 3 deg": tilt_eq < math.radians(3.0),
-        "hips within 0.2 rad of each other standing": stagger < 0.2,
+        "wheels within 15 mm front to back standing": stagger_mm < 15.0,
     }
     if env_name != "s1":
         nominal["height within 10 mm at all three"] = all(
