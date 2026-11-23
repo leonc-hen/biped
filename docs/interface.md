@@ -1,4 +1,4 @@
-# Policy interface, v0.3
+# Policy interface, v0.4
 
 Single definition for training, export and firmware. Any change bumps the
 version and is a decisions.md entry. Order, units and scaling are normative.
@@ -45,6 +45,9 @@ belt, so its angle is hip + knee. Firmware maps joint targets to motor targets
 (m1 = hip, m2 = hip + knee), runs one PD loop per motor on motor angle and speed
 inside that motor's torque speed envelope, and reports joint angles back to the
 policy (hip = m1, knee = m2 - m1). Observations and actions stay in joint space.
+
+Target clamp (v0.4): leg joint targets are clamped to the joint limits minus 0.05 rad
+before mapping to motor targets. Firmware applies the same clamp.
 
 ## Conventions
 As docs/conventions.md: x forward, joint axes +y, positive hip and knee swing

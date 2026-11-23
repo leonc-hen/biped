@@ -46,14 +46,14 @@ S1 = dict(name="s1", height_cmd=False, resample_s=None, push_every_s=None,
           cmd_fixed=None, reset_perturb=True, noise_scale=None, delay_fixed_ms=None,
           w_angvel=0.02, angvel_roll_pitch_only=False,
           w_track_v_sharp=0.0, track_v_sharp_sigma2=0.0025, push_max_norm=None,
-          w_posture=0.0, w_hip_sym=0.0)
+          w_posture=0.0, w_hip_sym=0.0, w_stagger=0.0, delay_max_ms=20.0)
 S2 = dict(S1, name="s2", height_cmd=True, resample_s=3.0, push_every_s=6.0,
           push_dv=(0.6, 0.4), leg_filter_alpha=0.5,
           w_tilt=0.5, tilt_sigma2=0.003, w_height=1.0, height_sigma2=0.0025,
           height_sigma2_fine=0.0004)
 S2R = dict(S2, name="s2r", dr=True, dr_scale=1.0, wheel_envelope=True,
-           w_angvel=0.1, angvel_roll_pitch_only=True, w_track_v_sharp=0.5,
-           w_posture=0.3, w_hip_sym=5.0)
+           w_angvel=0.5, angvel_roll_pitch_only=True, w_track_v_sharp=0.5,
+           w_posture=0.3, w_hip_sym=0.0, w_stagger=400.0)
 CONFIGS = dict(s1=S1, s2=S2, s2r=S2R)
 
 
@@ -136,11 +136,17 @@ def make_env(cfg=None):
     h_lo, h_hi = p["pose"]["height_cmd_range_m"]
     r_w = p["wheel"]["radius_m"]
     l12 = p["thigh"]["length_m"] + p["shank"]["length_m"]
+    l1, l2 = p["thigh"]["length_m"], p["shank"]["length_m"]
+
+    def foot_x(qh, qk):
+        """Wheel axle position ahead of the hip, in the torso frame. Positive hip and
+        knee swing the foot backward, so forward is negative sine."""
+        return -(l1 * jnp.sin(qh) + l2 * jnp.sin(qh + qk))
     qpos0 = jnp.array(cpu_model.key_qpos[cpu_model.key("stand").id])
     wheel_peak = wm["peak_torque_Nm"]
     torso = cpu_model.body("torso").id
     nbody, nv = cpu_model.nbody, cpu_model.nv
-    max_delay_sub = round(0.020 / phys_dt)     # 20 ms in physics substeps
+    max_delay_sub = round(cfg["delay_max_ms"] / 1000 / phys_dt)
     assert max_delay_sub <= 2 * n_sub, "delay model keeps two ticks of history"
     scale = jnp.concatenate([
         jnp.ones(3), jnp.full(3, 0.25), jnp.ones(4), jnp.full(4, 0.05),
@@ -323,6 +329,7 @@ def make_env(cfg=None):
         q_j = data.qpos[LEG_Q]
         cost_posture = jnp.sum(jnp.square(q_j - ik_jnp(state.cmd[2])))
         cost_hip_sym = jnp.square(q_j[0] - q_j[2])
+        cost_stagger = jnp.square(foot_x(q_j[0], q_j[1]) - foot_x(q_j[2], q_j[3]))
         track_v_sharp = jnp.exp(-jnp.square(err_v) / cfg["track_v_sharp_sigma2"])
 
         steps = state.steps + 1
@@ -335,6 +342,7 @@ def make_env(cfg=None):
                   - cfg["w_angvel"] * cost_angvel
                   + cfg["w_track_v_sharp"] * track_v_sharp
                   - cfg["w_posture"] * cost_posture - cfg["w_hip_sym"] * cost_hip_sym
+                  - cfg["w_stagger"] * cost_stagger
                   - W["fall"] * fell.astype(jnp.float32))
 
         cmd = state.cmd
