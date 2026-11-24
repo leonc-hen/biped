@@ -1,10 +1,11 @@
-"""Training environment for S1, S2 and S2R (docs/interface.md v0.2).
+"""Training environment for S1, S2, S2R and S3 (docs/interface.md v0.2).
 
 make_env(cfg) returns (reset, step, sizes, aux). Pure functional:
 reset(rng) -> EnvState, step(EnvState, action) -> EnvState. No auto reset.
 S1 reproduces reward v0.3 (s1_v2). S2 adds height commands, resampling, pushes,
 a leg action filter and a torso level reward (s2_v0 to s2_v3). S2R is S2 plus
 the plan 2.7 domain randomization (D16) and the wheel torque speed envelope.
+S3 is S2R plus one jump command per episode (R06).
 With dr False every randomization path is skipped, so S1 and S2 are unchanged.
 """
 import math
@@ -46,7 +47,10 @@ S1 = dict(name="s1", height_cmd=False, resample_s=None, push_every_s=None,
           cmd_fixed=None, reset_perturb=True, noise_scale=None, delay_fixed_ms=None,
           w_angvel=0.02, angvel_roll_pitch_only=False,
           w_track_v_sharp=0.0, track_v_sharp_sigma2=0.0025, push_max_norm=None,
-          w_posture=0.0, w_hip_sym=0.0, w_stagger=0.0, delay_max_ms=20.0)
+          w_posture=0.0, w_hip_sym=0.0, w_stagger=0.0, delay_max_ms=20.0,
+          jump=False, jump_window_s=1.5, w_jump=2.0, w_jump_vz=1.0, w_apex=100.0, w_impact=0.0,
+          jump_action_scale=0.5,
+          jump_primitive=False, jump_crouch_h=0.17, jump_land_h=0.22)
 S2 = dict(S1, name="s2", height_cmd=True, resample_s=3.0, push_every_s=6.0,
           push_dv=(0.6, 0.4), leg_filter_alpha=0.5,
           w_tilt=0.5, tilt_sigma2=0.003, w_height=1.0, height_sigma2=0.0025,
@@ -54,7 +58,8 @@ S2 = dict(S1, name="s2", height_cmd=True, resample_s=3.0, push_every_s=6.0,
 S2R = dict(S2, name="s2r", dr=True, dr_scale=1.0, wheel_envelope=True,
            w_angvel=0.5, angvel_roll_pitch_only=True, w_track_v_sharp=0.5,
            w_posture=0.3, w_hip_sym=0.0, w_stagger=400.0)
-CONFIGS = dict(s1=S1, s2=S2, s2r=S2R)
+S3 = dict(S2R, name="s3", jump=True, w_impact=1e-3, jump_action_scale=0.5, jump_primitive=True)
+CONFIGS = dict(s1=S1, s2=S2, s2r=S2R, s3=S3)
 
 
 class EnvState(NamedTuple):
@@ -68,6 +73,9 @@ class EnvState(NamedTuple):
     rng: jnp.ndarray
     dr: dict                     # this episode's randomization (nominal when dr is off)
     act_hist: jnp.ndarray        # applied actions from the previous two ticks, for delay
+    jump_at: jnp.ndarray         # policy step when the jump command starts, -1 for none
+    jump_apex: jnp.ndarray       # highest wheel clearance in this window, m
+    vz_prev: jnp.ndarray         # torso vertical speed last step, for the impact penalty
 
 
 def quat_mat(quat):
@@ -114,6 +122,10 @@ def make_env(cfg=None):
     cfg = dict(S1 if cfg is None else cfg)
     p = load_params()
     cpu_model = mujoco.MjModel.from_xml_string(build_xml(p, mode="torque"))
+    if cfg.get("physics_dt"):
+        cpu_model.opt.timestep = cfg["physics_dt"]
+    if cfg.get("solver_iterations"):
+        cpu_model.opt.iterations, cpu_model.opt.ls_iterations = cfg["solver_iterations"]
     model = mjx.put_model(cpu_model)
     lm, wm = p["leg_motor"], p["wheel_motor"]
     coaxial = p.get("legs", {}).get("topology", "serial") == "coaxial_belt"
@@ -123,7 +135,7 @@ def make_env(cfg=None):
         belt leg motor 2 turns the shank's absolute angle, hip + knee."""
         return v.at[1].add(v[0]).at[3].add(v[2]) if coaxial else v
     dt = p["sim"]["policy_dt_s"]
-    phys_dt = p["sim"]["physics_dt_s"]
+    phys_dt = float(cpu_model.opt.timestep)
     n_sub = round(dt / phys_dt)
     max_steps = round(EPISODE_S / dt)
     g_mag = p["sim"]["gravity_mps2"]
@@ -145,6 +157,7 @@ def make_env(cfg=None):
     qpos0 = jnp.array(cpu_model.key_qpos[cpu_model.key("stand").id])
     wheel_peak = wm["peak_torque_Nm"]
     torso = cpu_model.body("torso").id
+    wheel_ids = jnp.array([cpu_model.body("wheel_l").id, cpu_model.body("wheel_r").id])
     nbody, nv = cpu_model.nbody, cpu_model.nv
     max_delay_sub = round(cfg["delay_max_ms"] / 1000 / phys_dt)
     assert max_delay_sub <= 2 * n_sub, "delay model keeps two ticks of history"
@@ -211,6 +224,17 @@ def make_env(cfg=None):
         qh = -jnp.arccos(jnp.clip((h - r_w) / l12, -1.0, 1.0))
         return jnp.array([qh, -2.0 * qh, qh, -2.0 * qh])
 
+    EXT = jnp.array([-0.15, 0.30, -0.15, 0.30])     # nearly straight, wheel under the hip
+
+    def jump_base(t_s, h_cmd):
+        """Scripted jump in joint space: crouch, push, land, return to the stance."""
+        stand, crouch, land = ik_jnp(h_cmd), ik_jnp(cfg["jump_crouch_h"]), ik_jnp(cfg["jump_land_h"])
+        a = jnp.clip(t_s / 0.4, 0.0, 1.0)
+        b = jnp.clip((t_s - 0.85) / 0.4, 0.0, 1.0)
+        pre = (1.0 - a) * stand + a * crouch
+        post = (1.0 - b) * land + b * stand
+        return jnp.where(t_s < 0.4, pre, jnp.where(t_s < 0.55, EXT, post))
+
     def sample_cmd(rng):
         if cfg["cmd_fixed"] is not None:
             return jnp.array(cfg["cmd_fixed"], dtype=jnp.float32)
@@ -222,7 +246,7 @@ def make_env(cfg=None):
              if cfg["height_cmd"] else jnp.asarray(h_nom))
         return jnp.array([vx, yaw, h])
 
-    def get_obs(data, prev_action, cmd, dr, rng):
+    def get_obs(data, prev_action, cmd, dr, rng, flags=None):
         g_b = grav_dir_body(data.qpos[3:7], dr["g_unit"])
         gyro = data.qvel[3:6]
         q, qd, wd = data.qpos[LEG_Q], data.qvel[LEG_V], data.qvel[WHEEL_V]
@@ -235,7 +259,8 @@ def make_env(cfg=None):
             q = jnp.round(q / Q_RES) * Q_RES + s * 0.002 * jax.random.normal(k[2], (4,))
             qd = qd + s * 0.05 * jax.random.normal(k[3], (4,))
             wd = wd + s * 0.1 * jax.random.normal(k[4], (2,))
-        raw = jnp.concatenate([g_b, gyro, q, qd, wd, prev_action, cmd, jnp.zeros(2)])
+        raw = jnp.concatenate([g_b, gyro, q, qd, wd, prev_action, cmd,
+                               jnp.zeros(2) if flags is None else flags])
         return raw * scale
 
     def init_from_data(data, cmd):
@@ -245,10 +270,11 @@ def make_env(cfg=None):
         dr0 = sample_dr(key) if cfg["dr"] else nominal_dr
         return EnvState(data, get_obs(data, a0, cmd, dr0, key), a0, cmd, z, z,
                         jnp.zeros((), dtype=jnp.int32), key, dr0,
-                        jnp.zeros((2, ACT_SIZE)))
+                        jnp.zeros((2, ACT_SIZE)), jnp.asarray(-1, dtype=jnp.int32),
+                        jnp.zeros(()), jnp.zeros(()))
 
     def reset(rng):
-        rng, rc, rv, rd, ro = jax.random.split(rng, 5)
+        rng, rc, rv, rd, ro, rj = jax.random.split(rng, 6)
         cmd = sample_cmd(rc)
         dr = sample_dr(rd) if cfg["dr"] else nominal_dr
         m = apply_dr(dr) if cfg["dr"] else model
@@ -259,17 +285,29 @@ def make_env(cfg=None):
             qvel0 = jnp.zeros(model.nv)
         data = mjx.forward(m, mjx.make_data(m).replace(qpos=qpos0, qvel=qvel0))
         a0, z = jnp.zeros(ACT_SIZE), jnp.zeros(())
+        jump_at = (jax.random.randint(rj, (), round(2.0 / dt), round(6.0 / dt)) if cfg["jump"]
+                   else jnp.asarray(-1)).astype(jnp.int32)
         return EnvState(data, get_obs(data, a0, cmd, dr, ro), a0, cmd, z, z,
-                        jnp.zeros((), dtype=jnp.int32), rng, dr, jnp.zeros((2, ACT_SIZE)))
+                        jnp.zeros((), dtype=jnp.int32), rng, dr, jnp.zeros((2, ACT_SIZE)),
+                        jump_at, jnp.zeros(()), jnp.zeros(()))
 
     def step(state, action):
         rng, dr = state.rng, state.dr
+        steps = state.steps + 1
+        win = round(cfg["jump_window_s"] / dt)
+        in_win = (state.jump_at >= 0) & (steps >= state.jump_at) & (steps < state.jump_at + win)
+        win_end = (state.jump_at >= 0) & (steps == state.jump_at + win)
+        fw = in_win.astype(jnp.float32)
+        leg_scale = 0.5 + (cfg["jump_action_scale"] - 0.5) * fw
         m = apply_dr(dr) if cfg["dr"] else model
         a_raw = jnp.tanh(action)
         al = cfg["leg_filter_alpha"]
         a = a_raw.at[:4].set(al * a_raw[:4] + (1.0 - al) * state.prev_action[:4])
         hist = jnp.stack([a, state.act_hist[0], state.act_hist[1]])   # now, 1 and 2 ticks ago
         base = ik_jnp(state.cmd[2])
+        if cfg["jump_primitive"]:
+            t_j = (steps - state.jump_at).astype(jnp.float32) * dt
+            base = jnp.where(in_win, jump_base(t_j, state.cmd[2]), base)
         kp = lm["kp_Nm_per_rad"] * dr["kp_s"]
         kd = lm["kv_Nms_per_rad"] * dr["kd_s"]
         leg_speed = lm["max_speed_rad_s"] * dr["v_scale"]
@@ -278,7 +316,7 @@ def make_env(cfg=None):
         data = state.data
         if cfg["push_every_s"]:
             rng, kp_, kd_ = jax.random.split(rng, 3)
-            hit = jax.random.uniform(kp_, ()) < dt / cfg["push_every_s"]
+            hit = (jax.random.uniform(kp_, ()) < dt / cfg["push_every_s"]) & ~in_win
             if cfg["push_max_norm"] is None:
                 dvxy = (jax.random.uniform(kd_, (2,), minval=-1.0, maxval=1.0)
                         * jnp.array(cfg["push_dv"]))
@@ -292,7 +330,7 @@ def make_env(cfg=None):
         def sub(d, j):
             # substep j: the action in force was issued 0, 1 or 2 ticks ago
             a_eff = hist[jnp.clip((dr["delay_sub"] - j + n_sub - 1) // n_sub, 0, 2)]
-            tgt_j = jnp.clip(base + 0.5 * a_eff[:4], j_lo, j_hi)
+            tgt_j = jnp.clip(base + leg_scale * a_eff[:4], j_lo, j_hi)
             tau_leg = pd_torque(to_motor(d.qpos[LEG_Q]), to_motor(d.qvel[LEG_V]), to_motor(tgt_j),
                                 kp, kd, lm["peak_torque_Nm"], leg_speed) * dr["kt_leg"]
             tau_w = wheel_peak * a_eff[4:6]
@@ -330,19 +368,27 @@ def make_env(cfg=None):
         cost_posture = jnp.sum(jnp.square(q_j - ik_jnp(state.cmd[2])))
         cost_hip_sym = jnp.square(q_j[0] - q_j[2])
         cost_stagger = jnp.square(foot_x(q_j[0], q_j[1]) - foot_x(q_j[2], q_j[3]))
+        clear = jnp.maximum(jnp.min(data.xpos[wheel_ids, 2]) - r_w, 0.0)
+        apex = jnp.where(in_win, jnp.maximum(state.jump_apex, clear), state.jump_apex)
+        vz = data.qvel[2]
+        az = (vz - state.vz_prev) / dt
         track_v_sharp = jnp.exp(-jnp.square(err_v) / cfg["track_v_sharp_sigma2"])
 
-        steps = state.steps + 1
         fell = (upright < math.cos(1.0)) | (height < 0.08)
         done = (fell | (steps >= max_steps)).astype(jnp.float32)
         reward = (W["track_v"] * track_v + W["track_v_fine"] * track_v_fine
                   + W["track_yaw"] * track_yaw + W["upright"] * upright
-                  + cfg["w_tilt"] * tilt_r + cfg["w_height"] * height_r
+                  + cfg["w_tilt"] * tilt_r + cfg["w_height"] * height_r * (1.0 - fw)
                   - W["torque"] * cost_tau - W["action_rate"] * cost_rate
                   - cfg["w_angvel"] * cost_angvel
                   + cfg["w_track_v_sharp"] * track_v_sharp
-                  - cfg["w_posture"] * cost_posture - cfg["w_hip_sym"] * cost_hip_sym
+                  - cfg["w_posture"] * cost_posture * (1.0 - fw) - cfg["w_hip_sym"] * cost_hip_sym
                   - cfg["w_stagger"] * cost_stagger
+                  + cfg["w_jump"] * fw * jnp.minimum(clear, 0.12) / 0.06
+                  + cfg["w_jump_vz"] * fw * jnp.clip(vz, 0.0, 2.5)
+                  + cfg["w_apex"] * win_end.astype(jnp.float32) * jnp.clip(apex / 0.06, 0.0, 2.0)
+                  - cfg["w_impact"] * (state.vz_prev < -0.2).astype(jnp.float32)
+                    * jnp.square(jnp.maximum(jnp.abs(az) - 30.0, 0.0))
                   - W["fall"] * fell.astype(jnp.float32))
 
         cmd = state.cmd
@@ -355,8 +401,9 @@ def make_env(cfg=None):
             rng, ko = jax.random.split(rng)
         else:
             ko = rng
-        return EnvState(data, get_obs(data, a, cmd, dr, ko), a, cmd, reward, done, steps,
-                        rng, dr, jnp.stack([a, state.act_hist[0]]))
+        return EnvState(data, get_obs(data, a, cmd, dr, ko, jnp.array([fw, 0.0])), a, cmd,
+                        reward, done, steps,
+                        rng, dr, jnp.stack([a, state.act_hist[0]]), state.jump_at, apex, vz)
 
     aux = dict(p=p, cfg=cfg, model=model, qpos0=qpos0, stand_leg=stand_leg, h_nom=h_nom,
                h_range=(h_lo, h_hi), lm=lm, wheel_peak=wheel_peak, ik=ik_jnp,
