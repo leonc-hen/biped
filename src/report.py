@@ -15,7 +15,12 @@ KEYS = ("standing_tilt_mean_deg", "standing_tilt_std_deg", "standing_wobble_hz",
         "track_0.3_mean_v", "track_1.0_mean_v", "track_1.0_settle_s",
         "height_0.150_signed_mm", "height_0.250_signed_mm", "height_0.300_signed_mm",
         "push_rand_0.4_success", "dr_push_0.4_success", "dr_push_fail_reasons", "within_spec_fall",
-        "train_dist_fall", "first_failures")
+        "train_dist_fall", "first_failures",
+        "jump_nominal_success_10cm", "jump_dr_success_10cm", "jump_dr_fell", "jump_dr_com_rise_cm",
+        "jump_dr_wheel_clearance_cm_median", "jump_dr_landing_leg_torque_Nm",
+        "jump_dr_fall_time_after_cmd_s", "jump_dr_max_tilt_in_window_deg",
+        "jump_nominal_com_rise_cm", "jump_nominal_fell", "jump_nominal_wheel_clearance_cm_median",
+        "jump_nominal_landing_leg_torque_Nm")
 
 
 def main():
@@ -38,7 +43,7 @@ def main():
         idx = [i for i, l in enumerate(lines) if l.strip() in ("nominal model",)]
         if idx:
             print("\n== last gate")
-            print("\n".join(lines[idx[-1]:idx[-1] + 14]))
+            print("\n".join(lines[idx[-1]:idx[-1] + 24]))
     print("\n== posture")
     subprocess.run([sys.executable, "src/diag_saturation.py", "--run", args.run], cwd=ROOT)
     return 0

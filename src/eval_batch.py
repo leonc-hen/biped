@@ -69,7 +69,7 @@ def make_rollout(step_fn, net, params, n, to_motor):
                 tilt=jnp.arccos(jnp.clip(-g[2], -1.0, 1.0)), v=forward_velocity(d),
                 done=st.done, tau_leg=d.ctrl[LEG_CTRL], tau_w=d.ctrl[WHEEL_CTRL],
                 v_leg=to_motor(d.qvel[LEG_V]), v_w=d.qvel[WHEEL_V], h=d.qpos[2], cmd=st.cmd,
-                q_leg=d.qpos[LEG_Q])
+                q_leg=d.qpos[LEG_Q], com_z=d.subtree_com[1, 2], jump_apex=st.jump_apex)
         _, out = jax.lax.scan(body, state, jnp.arange(n))
         return out
     return jax.jit(jax.vmap(one))
@@ -320,7 +320,8 @@ def main():
         if b_cfg["dr"]:
             print(f"Part C: R07 pushes under randomization, scale {b_cfg['dr_scale']}", flush=True)
             c_cfg = dict(b_cfg, push_every_s=None, resample_s=None,
-                         cmd_fixed=(0.0, 0.0, h_nom), reset_perturb=False, delay_max_ms=10.0)
+                         cmd_fixed=(0.0, 0.0, h_nom), reset_perturb=False, delay_max_ms=10.0,
+                         jump=False)
             reset_c, step_c, _, _ = make_env(c_cfg)
             nc = 1000
             rc = np.random.default_rng(1)
@@ -353,7 +354,7 @@ def main():
                 SECTORS[s]: round(float(okc[sec_c == s].mean()), 3) for s in range(8)}
 
             print("Part D: training distribution with pushes limited to R07", flush=True)
-            d_cfg = dict(b_cfg, push_max_norm=0.4, delay_max_ms=10.0)
+            d_cfg = dict(b_cfg, push_max_norm=0.4, delay_max_ms=10.0, jump=False)
             reset_d, step_d, _, _ = make_env(d_cfg)
             states_d = jax.jit(jax.vmap(reset_d))(jax.random.split(jax.random.PRNGKey(321), nb))
             roll_d = make_rollout(step_d, net, params, N_STAT, aux["to_motor"])
@@ -382,6 +383,72 @@ def main():
                 table[name] = row
                 print(f"    {name:20s} " + "   ".join(f"{r}: {v:.3f}" for r, v in row.items()))
             res["within_spec_fall_by_factor"] = table
+
+    # ---- Part E: jumps (R06), nominal with --a_only, randomized otherwise
+    if train_cfg.get("jump"):
+        n_e = 200 if args.a_only else 1000
+        base_e = det_cfg if args.a_only else dict(b_cfg, delay_max_ms=10.0)
+        e_cfg = dict(base_e, jump=True, push_every_s=None, resample_s=None,
+                     cmd_fixed=(0.0, 0.0, h_nom), reset_perturb=False)
+        print(f"Part E: {n_e} jumps, {'nominal' if args.a_only else 'randomized'}", flush=True)
+        reset_e, step_e, _, _ = make_env(e_cfg)
+        states_e = jax.jit(jax.vmap(reset_e))(jax.random.split(jax.random.PRNGKey(55), n_e))
+        roll_e = make_rollout(step_e, net, params, N_STAT, aux["to_motor"])
+        oe = {k: np.array(x) for k, x in roll_e(
+            states_e, jnp.full(n_e, -1), jnp.zeros((n_e, 2))).items()}
+        ja = np.array(states_e.jump_at)
+        win_e = round(e_cfg["jump_window_s"] / DT)
+        rise = np.zeros(n_e)
+        fell_e = np.zeros(n_e, dtype=bool)
+        settled_e = np.zeros(n_e, dtype=bool)
+        land_tau = np.zeros(n_e)
+        for i in range(n_e):
+            k = int(ja[i])
+            rise[i] = oe["com_z"][i, k:k + win_e].max() - oe["com_z"][i, k - 50:k].mean()
+            fell_e[i] = (oe["done"][i, :N_STAT - 1] > 0.5).any()
+            settled_e[i] = (not fell_e[i]) and oe["tilt"][i, -50:].std() < DEG1
+            land_tau[i] = np.abs(oe["tau_leg"][i, k:k + win_e]).max()
+        clear_e = oe["jump_apex"][:, -1]
+        tag = "jump_nominal" if args.a_only else "jump_dr"
+        res[f"{tag}_success_10cm"] = wilson(int((settled_e & (rise >= 0.10)).sum()), n_e)
+        res[f"{tag}_success_12cm"] = round(float((settled_e & (rise >= 0.12)).mean()), 3)
+        res[f"{tag}_fell"] = round(float(fell_e.mean()), 3)
+        res[f"{tag}_com_rise_cm"] = {q: round(float(np.percentile(rise, p)) * 100, 1)
+                                     for q, p in (("p10", 10), ("median", 50), ("p90", 90))}
+        res[f"{tag}_wheel_clearance_cm_median"] = round(float(np.median(clear_e)) * 100, 1)
+        res[f"{tag}_landing_leg_torque_Nm"] = {"p99": round(float(np.percentile(land_tau, 99)), 2),
+                                               "peak": round(float(land_tau.max()), 2)}
+        fell_t = np.array([(np.argmax(oe["done"][i] > 0.5) - int(ja[i])) * DT if fell_e[i] else np.nan
+                           for i in range(n_e)])
+        tilt_win = np.array([np.degrees(oe["tilt"][i, int(ja[i]):int(ja[i]) + win_e].max())
+                             for i in range(n_e)])
+        if fell_e.any():
+            res[f"{tag}_fall_time_after_cmd_s"] = {
+                q: round(float(np.nanpercentile(fell_t, p)), 2)
+                for q, p in (("p10", 10), ("median", 50), ("p90", 90))}
+        res[f"{tag}_max_tilt_in_window_deg"] = {
+            "falls": round(float(np.median(tilt_win[fell_e])), 1) if fell_e.any() else None,
+            "successes": round(float(np.median(tilt_win[~fell_e])), 1) if (~fell_e).any() else None}
+        if not args.a_only and fell_e.any():
+            dre = {k: np.array(v) for k, v in states_e.dr.items()}
+            factors = {
+                "battery_V": dre["v_scale"] * 24.0,
+                "friction": dre["mu"],
+                "delay_ms": dre["delay_sub"] * 1000.0 * p["sim"]["physics_dt_s"],
+                "slope_deg": np.degrees(np.arccos(np.clip(-dre["g_unit"][:, 2], -1.0, 1.0))),
+                "torso_com_x_mm": dre["com_offset"][:, 0] * 1000.0,
+                "torso_mass_scale": dre["mass_scale"][:, 1],
+                "leg_torque_const": dre["kt_leg"].mean(1),
+            }
+            print("  jump fall rate by factor (thirds of the episodes):")
+            table = {}
+            for name, x in factors.items():
+                b = np.digitize(x, np.quantile(x, [1 / 3, 2 / 3]))
+                row = {f"{x[b == k].min():.3g} to {x[b == k].max():.3g}": round(float(fell_e[b == k].mean()), 3)
+                       for k in range(3) if (b == k).any()}
+                table[name] = row
+                print(f"    {name:20s} " + "   ".join(f"{r}: {v:.3f}" for r, v in row.items()))
+            res[f"{tag}_fall_by_factor"] = table
 
     res["runtime_s"] = round(time.time() - t0, 1)
     tag = "" if args.dr_scale is None else f"_dr{args.dr_scale}"
@@ -412,9 +479,15 @@ def main():
     groups = [("nominal model", nominal)]
     if b_cfg["dr"] and not args.a_only:
         groups.append((f"randomized, scale {b_cfg['dr_scale']}", {
-            "R07 push success, CI lower bound 0.90": res["dr_push_0.4_success"]["ci95"][0] >= 0.90,
+            "R07 push success at least 95 percent (Gate A)": res["dr_push_0.4_success"]["rate"] >= 0.95,
             "within spec fall rate at most 3 percent (R07 pushes)":
                 res["within_spec_fall"]["rate"] <= 0.03,
+        }))
+    if train_cfg.get("jump"):
+        tag = "jump_nominal" if args.a_only else "jump_dr"
+        groups.append((f"jumps ({'nominal' if args.a_only else 'randomized'})", {
+            "R06 10 cm jump success at least 90 percent":
+                res[f"{tag}_success_10cm"]["rate"] >= 0.90,
         }))
     gate_ok = True
     for title, checks in groups:
