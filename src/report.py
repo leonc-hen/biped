@@ -14,7 +14,8 @@ KEYS = ("standing_tilt_mean_deg", "standing_tilt_std_deg", "standing_wobble_hz",
         "max_push_fwd_m_s", "max_push_back_m_s", "max_push_lat_m_s", "max_push_lat_neg_m_s",
         "track_0.3_mean_v", "track_1.0_mean_v", "track_1.0_settle_s",
         "height_0.150_signed_mm", "height_0.250_signed_mm", "height_0.300_signed_mm",
-        "push_rand_0.4_success", "dr_push_0.4_success", "dr_push_fail_reasons", "within_spec_fall",
+        "push_rand_0.4_success", "dr_push_0.4_success", "dr_push_0.4_success_vs_prepush",
+        "dr_nopush_drift_deg", "dr_push_fail_reasons", "within_spec_fall",
         "train_dist_fall", "first_failures",
         "jump_nominal_success_10cm", "jump_dr_success_10cm", "jump_dr_fell", "jump_dr_com_rise_cm",
         "jump_dr_wheel_clearance_cm_median", "jump_dr_landing_leg_torque_Nm",
@@ -37,13 +38,13 @@ def main():
     for k in KEYS:
         if k in r:
             print(f"{k}: {r[k]}")
-    log = ROOT / "results" / "pipeline.txt"
-    if log.exists():
-        lines = log.read_text().splitlines()
-        idx = [i for i, l in enumerate(lines) if l.strip() in ("nominal model",)]
-        if idx:
-            print("\n== last gate")
-            print("\n".join(lines[idx[-1]:idx[-1] + 24]))
+    if "gate" in r:
+        print("\n== gate (this evaluation)")
+        for title, checks in r["gate"].items():
+            print(title)
+            for name, passed in checks.items():
+                print(f"  {'PASS' if passed else 'FAIL'}  {name}")
+        print(f"\nGATE {'PASS' if r['gate_pass'] else 'FAIL'}")
     print("\n== posture")
     subprocess.run([sys.executable, "src/diag_saturation.py", "--run", args.run], cwd=ROOT)
     return 0

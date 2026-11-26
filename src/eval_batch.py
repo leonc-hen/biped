@@ -332,6 +332,10 @@ def main():
             roll_c = make_rollout(step_c, net, params, N_DET, aux["to_motor"])
             oc = {k: np.array(x) for k, x in roll_c(
                 states_c, jnp.array(k_c), jnp.array(dv_c)).items()}
+            oc0 = {k: np.array(x) for k, x in roll_c(
+                states_c, jnp.full(nc, -1), jnp.zeros((nc, 2))).items()}    # same robots, no push
+            ok_pre = np.zeros(nc, dtype=bool)
+            drift = np.zeros(nc)
             okc = np.zeros(nc, dtype=bool)
             reasons = {"fell": 0, "lean offset": 0, "wobble": 0, "still moving": 0}
             for i in range(nc):
@@ -341,13 +345,21 @@ def main():
                 k = int(k_c[i])
                 pre = oc["tilt"][i, k - 50:k].mean()      # each robot's own equilibrium
                 tail = oc["tilt"][i, N_DET - 50:]
-                lean_ok = abs(tail.mean() - pre) < DEG2
+                twin_fell = (oc0["done"][i] > 0.5).any()
+                ref = pre if twin_fell else oc0["tilt"][i, N_DET - 50:].mean()
+                drift[i] = abs(ref - pre)
+                lean_ok = abs(tail.mean() - ref) < DEG2
+                ok_pre[i] = abs(tail.mean() - pre) < DEG2 and tail.std() < DEG1 and \
+                    abs(oc["v"][i, N_DET - 50:].mean()) < 0.1
                 wob_ok = tail.std() < DEG1
                 spd_ok = abs(oc["v"][i, N_DET - 50:].mean()) < 0.1
                 okc[i] = lean_ok and wob_ok and spd_ok
                 if not okc[i]:
                     reasons["lean offset" if not lean_ok else "wobble" if not wob_ok else "still moving"] += 1
             res["dr_push_fail_reasons"] = reasons
+            res["dr_push_0.4_success_vs_prepush"] = round(float(ok_pre.mean()), 3)
+            res["dr_nopush_drift_deg"] = {"median": round(float(np.degrees(np.median(drift))), 2),
+                                          "p90": round(float(np.degrees(np.percentile(drift, 90))), 2)}
             res["dr_push_0.4_success"] = wilson(int(okc.sum()), nc)
             sec_c = (((ang_c + math.pi / 8) % (2 * math.pi)) // (math.pi / 4)).astype(int)
             res["dr_push_0.4_by_sector"] = {
@@ -495,6 +507,10 @@ def main():
         for name, passed in checks.items():
             gate_ok &= passed
             print(f"  {'PASS' if passed else 'FAIL'}  {name}")
+    res["gate"] = {title: {name: bool(v) for name, v in checks.items()} for title, checks in groups}
+    res["gate_pass"] = bool(gate_ok)
+    with open(out_path, "w") as f:
+        json.dump(res, f, indent=2, default=float)
     print(f"\nGATE {'PASS' if gate_ok else 'FAIL'}")
 
     if args.compare:

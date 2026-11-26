@@ -1,0 +1,252 @@
+{
+  "env": "s3",
+  "run": "s3v8_b",
+  "standing_tilt_mean_deg": 0.722,
+  "standing_tilt_std_deg": 0.01,
+  "standing_wobble_hz": 2.6,
+  "standing_wheel_stagger_mm": 0.1,
+  "max_recovered_tilt_rad": 0.6,
+  "max_recovered_tilt_back_rad": 0.6,
+  "recovery_time_from_0.3rad_s": 0.32,
+  "max_push_fwd_m_s": 1.4,
+  "max_push_back_m_s": 1.2,
+  "max_push_lat_m_s": 0.6,
+  "max_push_lat_neg_m_s": 0.6,
+  "standing_mean_v_m_s": 0.0121,
+  "first_failures": {
+    "tilt_fwd_0.7": "fell at 0.51 s",
+    "tilt_back_0.7": "fell at 0.87 s",
+    "push_fwd_1.5": "fell at 1.71 s",
+    "push_back_1.3": "fell at 1.92 s",
+    "push_lat_0.7": "fell at 1.76 s",
+    "push_lat_neg_0.7": "fell at 1.66 s"
+  },
+  "track_0.3_fell": false,
+  "track_0.3_mean_v": 0.309,
+  "track_0.3_settle_s": 0.5,
+  "track_0.3_overshoot_pct": 26.0,
+  "track_1.0_fell": false,
+  "track_1.0_mean_v": 0.999,
+  "track_1.0_settle_s": 0.43,
+  "track_1.0_overshoot_pct": 9.5,
+  "energy_J_per_m_at_1m_s": 1.15,
+  "height_0.150_signed_mm": -10.0,
+  "height_0.150_err_mm": 10.0,
+  "height_0.250_signed_mm": -0.6,
+  "height_0.250_err_mm": 0.6,
+  "height_0.300_signed_mm": 4.2,
+  "height_0.300_err_mm": 4.2,
+  "push_rand_0.4_success": {
+    "rate": 1.0,
+    "ci95": [
+      0.9962,
+      1.0
+    ],
+    "n": 1000
+  },
+  "push_rand_0.4_by_sector": {
+    "fwd": 1.0,
+    "fwd_left": 1.0,
+    "left": 1.0,
+    "back_left": 1.0,
+    "back": 1.0,
+    "back_right": 1.0,
+    "right": 1.0,
+    "fwd_right": 1.0
+  },
+  "train_dist_fall": {
+    "rate": 0.264,
+    "ci95": [
+      0.2376,
+      0.2922
+    ],
+    "n": 1000
+  },
+  "train_dist_v_rmse_m_s": {
+    "all": 0.3034,
+    "settled": 0.1945
+  },
+  "train_dist_h_rmse_mm": {
+    "all": 31.4,
+    "settled": 29.7
+  },
+  "train_dist_leg_torque_Nm": {
+    "hip_l": {
+      "peak": 4.509,
+      "p99": 3.847,
+      "rms": 1.176
+    },
+    "knee_l": {
+      "peak": 4.506,
+      "p99": 3.923,
+      "rms": 1.191
+    },
+    "hip_r": {
+      "peak": 4.509,
+      "p99": 3.811,
+      "rms": 1.186
+    },
+    "knee_r": {
+      "peak": 4.51,
+      "p99": 3.845,
+      "rms": 1.192
+    }
+  },
+  "train_dist_wheel_torque_Nm": {
+    "peak": 0.38,
+    "p99": 0.189,
+    "rms": 0.049
+  },
+  "train_dist_leg_speed": {
+    "peak_rad_s": 23.79,
+    "frac_above_90pct_limit": 0.0
+  },
+  "train_dist_wheel_speed_peak_rad_s": 97.1,
+  "train_dist_mean_power_W": 5.12,
+  "dr_push_fail_reasons": {
+    "fell": 1,
+    "lean offset": 0,
+    "wobble": 0,
+    "still moving": 16
+  },
+  "dr_push_0.4_success_vs_prepush": 0.615,
+  "dr_nopush_drift_deg": {
+    "median": 1.5,
+    "p90": 3.73
+  },
+  "dr_push_0.4_success": {
+    "rate": 0.983,
+    "ci95": [
+      0.9729,
+      0.9894
+    ],
+    "n": 1000
+  },
+  "dr_push_0.4_by_sector": {
+    "fwd": 0.992,
+    "fwd_left": 0.992,
+    "left": 0.964,
+    "back_left": 0.97,
+    "back": 0.992,
+    "back_right": 1.0,
+    "right": 0.992,
+    "fwd_right": 0.969
+  },
+  "within_spec_fall": {
+    "rate": 0.022,
+    "ci95": [
+      0.0146,
+      0.0331
+    ],
+    "n": 1000
+  },
+  "within_spec_fall_by_factor": {
+    "battery_V": {
+      "18 to 20.7": 0.018,
+      "20.7 to 23.1": 0.036,
+      "23.1 to 25.2": 0.012
+    },
+    "friction": {
+      "0.4 to 0.703": 0.045,
+      "0.704 to 0.979": 0.006,
+      "0.979 to 1.25": 0.015
+    },
+    "delay_ms": {
+      "0 to 0": 0.016,
+      "2 to 4": 0.03,
+      "6 to 10": 0.019
+    },
+    "slope_deg": {
+      "0.114 to 1.94": 0.018,
+      "1.94 to 2.75": 0.021,
+      "2.75 to 4.13": 0.027
+    },
+    "torso_com_x_mm": {
+      "-15 to -5.18": 0.012,
+      "-5.12 to 4.6": 0.006,
+      "4.62 to 15": 0.048
+    },
+    "max_cmd_speed_m_s": {
+      "0.00667 to 0.526": 0.018,
+      "0.527 to 0.797": 0.015,
+      "0.798 to 1": 0.033
+    },
+    "max_cmd_yaw_rad_s": {
+      "0.194 to 0.747": 0.018,
+      "0.747 to 0.9": 0.024,
+      "0.901 to 1": 0.024
+    },
+    "max_cmd_height_m": {
+      "0.171 to 0.265": 0.006,
+      "0.265 to 0.287": 0.015,
+      "0.287 to 0.3": 0.045
+    }
+  },
+  "jump_dr_success_10cm": {
+    "rate": 0.888,
+    "ci95": [
+      0.8669,
+      0.9061
+    ],
+    "n": 1000
+  },
+  "jump_dr_success_12cm": 0.835,
+  "jump_dr_fell": 0.112,
+  "jump_dr_com_rise_cm": {
+    "p10": 12.3,
+    "median": 13.7,
+    "p90": 15.1
+  },
+  "jump_dr_wheel_clearance_cm_median": 16.7,
+  "jump_dr_landing_leg_torque_Nm": {
+    "p99": 4.51,
+    "peak": 4.51
+  },
+  "jump_dr_fall_time_after_cmd_s": {
+    "p10": 1.19,
+    "median": 1.55,
+    "p90": 2.03
+  },
+  "jump_dr_max_tilt_in_window_deg": {
+    "falls": 46.4,
+    "successes": 26.3
+  },
+  "jump_dr_fall_by_factor": {
+    "battery_V": {
+      "18 to 20.4": 0.09,
+      "20.4 to 22.7": 0.135,
+      "22.7 to 25.2": 0.111
+    },
+    "friction": {
+      "0.403 to 0.685": 0.123,
+      "0.686 to 0.968": 0.102,
+      "0.969 to 1.25": 0.111
+    },
+    "delay_ms": {
+      "0 to 0": 0.144,
+      "2 to 4": 0.098,
+      "6 to 10": 0.109
+    },
+    "slope_deg": {
+      "0.127 to 1.91": 0.081,
+      "1.91 to 2.73": 0.123,
+      "2.74 to 4.08": 0.132
+    },
+    "torso_com_x_mm": {
+      "-15 to -4.8": 0.153,
+      "-4.76 to 5.27": 0.087,
+      "5.32 to 15": 0.096
+    },
+    "torso_mass_scale": {
+      "0.85 to 0.949": 0.057,
+      "0.95 to 1.05": 0.093,
+      "1.05 to 1.15": 0.186
+    },
+    "leg_torque_const": {
+      "0.917 to 0.987": 0.132,
+      "0.987 to 1.01": 0.099,
+      "1.01 to 1.08": 0.105
+    }
+  },
+  "runtime_s": 902.6
+}
