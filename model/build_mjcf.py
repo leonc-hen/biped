@@ -178,6 +178,18 @@ def build_xml(p, mode = "position"):
             ET.SubElement(fx, "joint", joint=f"hip_{side}", coef="1")
             ET.SubElement(fx, "joint", joint=f"knee_{side}", coef="1")
 
+    # Self collision between the legs and the body (D27). Body parts otherwise collide only with
+    # the floor. MJX cannot collide a cylinder with a box, so the wheels are checked against the
+    # shell geoms, which cover the torso box from the sides and above.
+    contact = ET.SubElement(root, "contact")
+    body_geoms = ["torso_geom"] + [g.get("name") for g in root.iter("geom")
+                                   if g.get("name", "").startswith("shell_")]
+    for side in ("l", "r"):
+        for g in body_geoms:
+            ET.SubElement(contact, "pair", geom1=f"shank_{side}_geom", geom2=g, condim="1")
+            if g != "torso_geom":
+                ET.SubElement(contact, "pair", geom1=f"wheel_{side}_geom", geom2=g, condim="1")
+
     # Position mode is a kinematic debug model: joint space PD regardless of topology.
     act = ET.SubElement(root, "actuator")
     for side in ("l", "r"):
