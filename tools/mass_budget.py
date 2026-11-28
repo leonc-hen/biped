@@ -89,7 +89,8 @@ def main():
         hold = total * g / 2 * LEG_M * math.sin(a_nom)
         print(f"  {name:28s} {total:8.3f}  {r01:12s} "
               f"{rise * 100:9.1f} /{res['wheel_clearance_m'] * 100:5.1f}  "
-              f"{hold / rated * 100:10.0f} %     {price}")
+              f"{hold / rated * 100:10.0f} %     {price}"
+              + f"   efficiency {res['efficiency']:.2f}")
     print("\nstanding load: static torque on each leg motor at the nominal pose, percent of rated")
 
 

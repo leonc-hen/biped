@@ -1,8 +1,8 @@
 """Can the S3 action space produce a 10 cm jump at all? On a vertical rail (as in
 src/jump_feasibility.py: base pinned in x, y and rotation after every policy step,
 free in z), so balance is taken out. Runs the scripted jump primitive with zero
-residual at the training physics settings, then at 2 ms and 0.5 ms with the full
-solver, to show the jump is not a timestep or solver artifact. Run from the repo root."""
+residual for several push target knee angles, to pick the one that gives about
+14 cm. Run from the repo root."""
 import sys
 from pathlib import Path
 
@@ -24,12 +24,10 @@ def rail(st):
         qvel=d.qvel.at[0:2].set(0.0).at[3:6].set(0.0)))
 
 
-for label, phys, iters in (("training settings", None, None),
-                           ("2 ms, full solver", 0.002, (100, 50)),
-                           ("0.5 ms, full solver", 0.0005, (100, 50))):
+for k_ext in (1.25,):
+    label = f"push to knee {k_ext:.2f} rad"
     cfg = dict(CONFIGS["s3"], dr=False, push_every_s=None, resample_s=None,
-               cmd_fixed=(0.0, 0.0, 0.25), reset_perturb=False,
-               physics_dt=phys, solver_iterations=iters)
+               cmd_fixed=(0.0, 0.0, 0.25), reset_perturb=False, jump_ext_knee=k_ext)
     reset, step, _, _ = make_env(cfg)
     st = reset(jax.random.PRNGKey(0))
     st = st._replace(jump_at=jnp.asarray(1, dtype=jnp.int32))

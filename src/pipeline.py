@@ -1,7 +1,7 @@
 """Overnight training pipeline: preflight checks, then curriculum stages back to
 back, each followed by its gate. Stops at the first failure, so a bad stage never
 wastes the next. Log in results/pipeline.txt. Run from the repo root:
-python src/pipeline.py [--start s3v9]
+python src/pipeline.py [--start s4_b] [--resume | --overwrite]
 """
 import argparse
 import json
@@ -13,8 +13,12 @@ ROOT = Path(__file__).resolve().parent.parent
 PY = sys.executable
 PREFLIGHT = [["-m", "pytest", "tests/", "-q"], ["src/step16_checks.py"], ["src/lqr_on_legged.py"]]
 STAGES = [
-    dict(name="s3v9", gate="exit", eval=[],
-         train=["--env", "s3", "--dr_scale", "1.0", "--steps", "150000000", "--init_from", "s3v8_b"]),
+    dict(name="s4_a", gate="exit", evaluator="src/eval_getup.py", eval=["--loco", "s3v9", "--a_only"],
+         train=["--env", "s4", "--dr_scale", "0.0", "--steps", "150000000", "--init_from", "s4_a_lib"]),
+    dict(name="s4_b", gate="exit", evaluator="src/eval_getup.py", eval=["--loco", "s3v9", "--a_only"],
+         train=["--env", "s4", "--dr_scale", "0.5", "--steps", "100000000", "--init_from", "s4_a"]),
+    dict(name="s4_c", gate="exit", evaluator="src/eval_getup.py", eval=["--loco", "s3v9"],
+         train=["--env", "s4", "--dr_scale", "1.0", "--steps", "150000000", "--init_from", "s4_b"]),
 ]
 
 def run(args, log):
@@ -37,6 +41,9 @@ def s1_gate(name):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--start", default=None, help="skip stages before this one")
+    ap.add_argument("--resume", action="store_true", help="continue the first stage from its own checkpoint")
+    ap.add_argument("--overwrite", action="store_true",
+                    help="allow retraining a stage that already has a checkpoint")
     args = ap.parse_args()
     names = [st["name"] for st in STAGES]
     if args.start is not None and args.start not in names:
@@ -55,10 +62,16 @@ def main():
                 continue
             print(f"training {st['name']}", flush=True)
             ran += 1
-            if run(["src/train_s1.py", "--name", st["name"], *st["train"]], log) != 0:
+            resume = args.resume and ran == 1
+            ckpt = ROOT / "runs" / st["name"] / "ckpt.pkl"
+            if ckpt.exists() and not args.overwrite and not resume:
+                print(f"{st['name']} already has a checkpoint; use --resume, --overwrite or a new stage name")
+                return 1
+            train = ["src/train_s1.py", "--name", st["name"], *st["train"]] + (["--resume"] if resume else [])
+            if run(train, log) != 0:
                 print(f"TRAINING CRASHED: {st['name']}")
                 return 1
-            code = run(["src/eval_batch.py", "--run", st["name"], *st["eval"]], log)
+            code = run([st.get("evaluator", "src/eval_batch.py"), "--run", st["name"], *st["eval"]], log)
             if st["gate"] == "s1":
                 checks = s1_gate(st["name"])
                 passed = all(checks.values())

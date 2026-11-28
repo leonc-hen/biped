@@ -178,17 +178,23 @@ def build_xml(p, mode = "position"):
             ET.SubElement(fx, "joint", joint=f"hip_{side}", coef="1")
             ET.SubElement(fx, "joint", joint=f"knee_{side}", coef="1")
 
-    # Self collision between the legs and the body (D27). Body parts otherwise collide only with
-    # the floor. MJX cannot collide a cylinder with a box, so the wheels are checked against the
-    # shell geoms, which cover the torso box from the sides and above.
-    contact = ET.SubElement(root, "contact")
-    body_geoms = ["torso_geom"] + [g.get("name") for g in root.iter("geom")
-                                   if g.get("name", "").startswith("shell_")]
-    for side in ("l", "r"):
-        for g in body_geoms:
-            ET.SubElement(contact, "pair", geom1=f"shank_{side}_geom", geom2=g, condim="1")
-            if g != "torso_geom":
-                ET.SubElement(contact, "pair", geom1=f"wheel_{side}_geom", geom2=g, condim="1")
+    # Self collision between the legs and the body (D27), through collision bits: MJX
+    # ignores explicit <pair> elements here. Rails (capsules) collide with shanks and wheels;
+    # the torso box and the top cylinder collide with shanks only, since MJX cannot collide
+    # a cylinder (the wheel) with a box.
+    SELF_RAIL, SELF_CORE = 8, 16
+    for g in root.iter("geom"):
+        n = g.get("name", "")
+        if n in ("shell_l_geom", "shell_r_geom"):
+            g.set("conaffinity", str(SELF_RAIL))
+            g.set("solref", "0.004 1")
+        elif n in ("torso_geom", "shell_top_geom"):
+            g.set("conaffinity", str(SELF_CORE))
+            g.set("solref", "0.004 1")
+        elif n.startswith("shank_"):
+            g.set("contype", str(int(BODY_PART) | SELF_RAIL | SELF_CORE))
+        elif n.startswith("wheel_"):
+            g.set("contype", str(int(WHEEL) | SELF_RAIL))
 
     # Position mode is a kinematic debug model: joint space PD regardless of topology.
     act = ET.SubElement(root, "actuator")

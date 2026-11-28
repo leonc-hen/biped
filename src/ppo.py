@@ -27,7 +27,8 @@ class ActorCritic(nn.Module):
         for n in (128, 128):            # actor stays small, 2.10 export budget
             h = nn.tanh(nn.Dense(n)(h))
         mean = nn.Dense(self.act_size)(h)
-        log_std = self.param("log_std", nn.initializers.constant(-0.5), (self.act_size,))
+        log_std = jnp.clip(
+            self.param("log_std", nn.initializers.constant(-0.5), (self.act_size,)), -3.0, 0.0)
         v = obs
         for n in (256, 256):            # critic can be bigger, it never ships
             v = nn.tanh(nn.Dense(n)(v))
@@ -99,7 +100,7 @@ def train(cfg, reset_fn, step_fn, sizes, run_dir):
         def body(carry, tr):
             adv_next, v_next = carry
             nonterm = 1.0 - tr.done
-            delta = tr.reward + cfg["gamma"] * v_next * nonterm - tr.value
+            delta = cfg.get("reward_scale", 0.1) * tr.reward + cfg["gamma"] * v_next * nonterm - tr.value
             adv = delta + cfg["gamma"] * cfg["lam"] * nonterm * adv_next
             return (adv, tr.value), adv
         _, advs = jax.lax.scan(body, (jnp.zeros(B), last_v), traj, reverse=True)
@@ -169,6 +170,10 @@ def train(cfg, reset_fn, step_fn, sizes, run_dir):
 
         if (u + 1) % cfg["ckpt_every"] == 0 or (u + 1) == n_updates:
             with open(ckpt_path, "wb") as f:
+                pickle.dump(dict(params=params, opt_state=opt_state,
+                                 update=u + 1, rng=rng, cfg=cfg), f)
+        if (u + 1) % 250 == 0:
+            with open(run_dir / f"ckpt_{u + 1:05d}.pkl", "wb") as f:
                 pickle.dump(dict(params=params, opt_state=opt_state,
                                  update=u + 1, rng=rng, cfg=cfg), f)
     writer.close()
