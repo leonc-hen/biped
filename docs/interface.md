@@ -1,4 +1,4 @@
-# Policy interface, v0.4
+# Policy interface, v0.5
 
 Single definition for training, export and firmware. Any change bumps the
 version and is a decisions.md entry. Order, units and scaling are normative.
@@ -17,7 +17,7 @@ version and is a decisions.md entry. Order, units and scaling are normative.
 | 4 | wheel_l, wheel_r velocity | 2 | rad/s | 0.025 |
 | 5 | previous action | 6 | action units | 1 |
 | 6 | commands: vx, yaw rate, hip height | 3 | m/s, rad/s, m | 1, 0.33, 4 |
-| 7 | mode flags: jump trigger, get up | 2 | 0 or 1 | 1 |
+| 7 | mode flags: jump trigger (1 for 1.5 s after a jump command), get up (1 in get up mode, also set at reset) | 2 | 0 or 1 | 1 |
 Total: 27. Scales multiply the raw value. History length 1 for now; adding
 history is a versioned change.
 
@@ -48,6 +48,20 @@ policy (hip = m1, knee = m2 - m1). Observations and actions stay in joint space.
 
 Target clamp (v0.4): leg joint targets are clamped to the joint limits minus 0.05 rad
 before mapping to motor targets. Firmware applies the same clamp.
+
+## Get up mode (v0.5, D25)
+The get up policy is a separate network with this same observation and action
+layout. The get up flag (row 7, observation index 26) is 1 while it runs and
+is also set at reset; the locomotion policy runs with it at 0.
+
+Fall handling, identical in sim and firmware:
+1. On fall detection the legs go limp until the body is at rest.
+2. Get up mode starts: flag to 1, the get up policy runs.
+3. Handoff to the locomotion policy (s3v9, D24) when all three hold: tilt
+   < 20 deg, torso height > 0.15 m, body rate < 2 rad/s (env config
+   handoff_tilt, handoff_height, handoff_rate). Flag back to 0.
+Open for firmware: the fall detection and "at rest" tests must match the
+ones used in training (src/env_s1.py).
 
 ## Conventions
 As docs/conventions.md: x forward, joint axes +y, positive hip and knee swing
