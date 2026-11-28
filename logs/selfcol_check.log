@@ -1,0 +1,27 @@
+E1128 13:54:11.880760     721 cuda_executor.cc:1439] [0] Failed to allocate device memory of 4.78GiB (5129633792 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:242
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:510
+
+E1128 13:54:11.881290     721 cuda_executor.cc:1439] [0] Failed to allocate device memory of 4.30GiB (4616670208 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:242
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:510
+
+get up start lying_back: upright +0.00 as placed, -0.92 at rest after 0.66 s, torso z 0.107 m, touching the floor: shell_top_geom, wheel_l_geom, wheel_r_geom
+get up start lying_front: upright +0.00 as placed, -0.61 at rest after 0.45 s, torso z 0.094 m, touching the floor: shell_l_geom, shell_r_geom, wheel_l_geom, wheel_r_geom
+get up start lying_side: upright +0.00 as placed, +0.23 at rest after 0.46 s, torso z 0.113 m, touching the floor: shell_r_geom, wheel_r_geom
+fall library: 2056 start states from 80 limp falls
+demo start states: 4212
+/home/leon_c/biped/src/selfcol_check.py:86: DeprecationWarning: Accessing `contact` directly from `Data` is deprecated. Access it via `data._impl.contact` instead.
+  con = dx.contact
+pairs in the model: 0
+
+deepest leg/body overlap -1.4 mm at t = 3.58 s
+CPU MuJoCo self contacts at that frame: 1
+  shell_l_geom / wheel_l_geom  dist -1.4 mm
+MJX self contact slots at that frame: 20 (1 penetrating)
+  shell_l_geom / wheel_l_geom  dist -1.2 mm
+  shell_l_geom / wheel_l_geom  dist +0.2 mm

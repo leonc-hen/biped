@@ -1,0 +1,32 @@
+{
+  "back": {
+    "score": 814.010498046875,
+    "best_pose": 0.9669955968856812,
+    "best_pose_min": 0.9524731636047363,
+    "success": 0.0,
+    "handoff": 0.0,
+    "t_handoff": null,
+    "peak_rate": 20.696062088012695,
+    "max_down_v": -0.5205562114715576
+  },
+  "front": {
+    "score": 905.8148803710938,
+    "best_pose": 0.9327566623687744,
+    "best_pose_min": 0.8796136379241943,
+    "success": 0.0,
+    "handoff": 0.75,
+    "t_handoff": 2.8366663455963135,
+    "peak_rate": 10.659172058105469,
+    "max_down_v": -0.6091669797897339
+  },
+  "side": {
+    "score": 902.1588134765625,
+    "best_pose": 0.969416618347168,
+    "best_pose_min": 0.9553831219673157,
+    "success": 0.0,
+    "handoff": 0.0,
+    "t_handoff": null,
+    "peak_rate": 8.312814712524414,
+    "max_down_v": -0.654771089553833
+  }
+}

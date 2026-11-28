@@ -1,0 +1,97 @@
+{
+  "env": "s3",
+  "run": "s3v8_b",
+  "standing_tilt_mean_deg": 0.721,
+  "standing_tilt_std_deg": 0.01,
+  "standing_wobble_hz": 2.8,
+  "standing_wheel_stagger_mm": 0.1,
+  "max_recovered_tilt_rad": 0.6,
+  "max_recovered_tilt_back_rad": 0.6,
+  "recovery_time_from_0.3rad_s": 0.32,
+  "max_push_fwd_m_s": 1.4,
+  "max_push_back_m_s": 1.2,
+  "max_push_lat_m_s": 0.6,
+  "max_push_lat_neg_m_s": 0.6,
+  "standing_mean_v_m_s": 0.0121,
+  "first_failures": {
+    "tilt_fwd_0.7": "fell at 0.51 s",
+    "tilt_back_0.7": "fell at 0.87 s",
+    "push_fwd_1.5": "fell at 1.71 s",
+    "push_back_1.3": "fell at 1.92 s",
+    "push_lat_0.7": "fell at 1.76 s",
+    "push_lat_neg_0.7": "fell at 1.66 s"
+  },
+  "track_0.3_fell": false,
+  "track_0.3_mean_v": 0.309,
+  "track_0.3_settle_s": 0.5,
+  "track_0.3_overshoot_pct": 26.0,
+  "track_1.0_fell": false,
+  "track_1.0_mean_v": 0.999,
+  "track_1.0_settle_s": 0.43,
+  "track_1.0_overshoot_pct": 9.4,
+  "energy_J_per_m_at_1m_s": 1.15,
+  "height_0.150_signed_mm": -10.0,
+  "height_0.150_err_mm": 10.0,
+  "height_0.250_signed_mm": -0.6,
+  "height_0.250_err_mm": 0.6,
+  "height_0.300_signed_mm": 4.2,
+  "height_0.300_err_mm": 4.2,
+  "push_rand_0.4_success": {
+    "rate": 1.0,
+    "ci95": [
+      0.9962,
+      1.0
+    ],
+    "n": 1000
+  },
+  "push_rand_0.4_by_sector": {
+    "fwd": 1.0,
+    "fwd_left": 1.0,
+    "left": 1.0,
+    "back_left": 1.0,
+    "back": 1.0,
+    "back_right": 1.0,
+    "right": 1.0,
+    "fwd_right": 1.0
+  },
+  "jump_nominal_success_10cm": {
+    "rate": 1.0,
+    "ci95": [
+      0.9812,
+      1.0
+    ],
+    "n": 200
+  },
+  "jump_nominal_success_12cm": 1.0,
+  "jump_nominal_fell": 0.0,
+  "jump_nominal_com_rise_cm": {
+    "p10": 14.5,
+    "median": 14.5,
+    "p90": 14.5
+  },
+  "jump_nominal_wheel_clearance_cm_median": 17.4,
+  "jump_nominal_landing_leg_torque_Nm": {
+    "p99": 4.1,
+    "peak": 4.1
+  },
+  "jump_nominal_max_tilt_in_window_deg": {
+    "falls": null,
+    "successes": 27.2
+  },
+  "runtime_s": 239.1,
+  "gate": {
+    "nominal model": {
+      "tilt 0.35 rad forward and back (R07)": true,
+      "push 0.4 m/s in all four directions (R07)": true,
+      "random direction 0.4 m/s push, CI lower bound 0.90": true,
+      "tracks 1.0 m/s": true,
+      "torso lean under 3 deg": true,
+      "wheels within 15 mm front to back standing": true,
+      "height within 10 mm at all three": true
+    },
+    "jumps (nominal)": {
+      "R06 10 cm jump success at least 90 percent": true
+    }
+  },
+  "gate_pass": true
+}

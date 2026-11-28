@@ -1,0 +1,27 @@
+E1128 14:20:26.241470    3194 cuda_executor.cc:1439] [0] Failed to allocate device memory of 5.97GiB (6410993664 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: === 
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:242
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:510
+
+E1128 14:20:26.242148    3194 cuda_executor.cc:1439] [0] Failed to allocate device memory of 5.37GiB (5769894400 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: === 
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:242
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:510
+
+E1128 14:20:26.242702    3194 cuda_executor.cc:1439] [0] Failed to allocate device memory of 4.84GiB (5192904704 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: === 
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:242
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:510
+
+E1128 14:20:26.243880    3194 cuda_executor.cc:1439] [0] Failed to allocate device memory of 4.35GiB (4673614336 bytes): RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: === 
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:242
+external/xla+/xla/stream_executor/cuda/cuda_device_allocator.cc:510
+
+training settings      scripted jump: CoM rise 13.9 cm, wheel clearance 16.6 cm
+2 ms, full solver      scripted jump: CoM rise 13.9 cm, wheel clearance 16.6 cm
+0.5 ms, full solver    scripted jump: CoM rise 14.4 cm, wheel clearance 17.0 cm

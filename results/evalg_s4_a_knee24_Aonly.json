@@ -1,0 +1,43 @@
+{
+  "run": "s4_a",
+  "loco": "s3v9",
+  "randomized": false,
+  "getup_back": {
+    "rate": 0.0,
+    "ci95": [
+      0.0,
+      0.0038
+    ],
+    "n": 1001
+  },
+  "getup_back_reached_handoff": 0.0,
+  "getup_back_time_s_median": null,
+  "getup_front": {
+    "rate": 0.0,
+    "ci95": [
+      0.0,
+      0.0038
+    ],
+    "n": 1019
+  },
+  "getup_front_reached_handoff": 0.0,
+  "getup_front_time_s_median": null,
+  "getup_side": {
+    "rate": 0.0,
+    "ci95": [
+      0.0,
+      0.0039
+    ],
+    "n": 980
+  },
+  "getup_side_reached_handoff": 0.0,
+  "getup_side_time_s_median": null,
+  "gate": {
+    "get up": {
+      "R08 up from back within 8 s, stays up 3 s, at least 90 percent": false,
+      "R08 up from front within 8 s, stays up 3 s, at least 90 percent": false,
+      "R08 up from side within 8 s, stays up 3 s, at least 90 percent": false
+    }
+  },
+  "gate_pass": false
+}
